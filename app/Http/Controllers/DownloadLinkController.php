@@ -15,6 +15,14 @@ class DownloadLinkController extends Controller
         $season = request()->query('season');
         $episode = request()->query('episode');
 
+        if ($type === 'custom') {
+            $customMovie = \App\Models\CustomMovie::find($id);
+            if ($customMovie) {
+                $type = $customMovie->type;
+                $id = 1000000000 + $customMovie->id;
+            }
+        }
+
         if ($id >= 1000000000) {
             $customId = $id - 1000000000;
             $customMovie = \App\Models\CustomMovie::find($customId);
