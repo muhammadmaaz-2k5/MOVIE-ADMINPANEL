@@ -16,6 +16,16 @@ class TmdbProxyController extends Controller
         $baseUrl = 'https://api.themoviedb.org/3';
         $queryParams = $request->query();
 
+        // Translate dubbed languages for TMDb to return both Hollywood (en) and original language
+        $langCode = isset($queryParams['with_original_language']) ? $queryParams['with_original_language'] : null;
+        if ($langCode && $langCode !== 'en') {
+            $dubbedCodes = ['hi', 'bn', 'ur', 'pa', 'ta', 'te', 'ml', 'kn', 'ar', 'fr', 'es'];
+            $cleanLang = strtolower(explode('-', $langCode)[0]);
+            if (in_array($cleanLang, $dubbedCodes)) {
+                $queryParams['with_original_language'] = "en|{$cleanLang}";
+            }
+        }
+
         // 1. Intercept Details requests for Custom Movies (ID > 1 Billion)
         if (preg_match('/^(movie|tv)\/(\d+)(.*)$/', $path, $matches)) {
             $type = $matches[1];
