@@ -145,13 +145,24 @@
             </div>
         </div>
 
-        <!-- Form -->
         <form id="link-form" onsubmit="submitLinkForm(event)" class="px-6 py-5 space-y-4">
             <input type="hidden" id="form-id" value=""/>
             <input type="hidden" id="form-content-type" value=""/>
             <input type="hidden" id="form-content-id" value=""/>
             <input type="hidden" id="form-content-title" value=""/>
             <input type="hidden" id="form-content-poster" value=""/>
+
+            <!-- Season & Episode (TV Only) -->
+            <div id="season-episode-fields" class="grid grid-cols-1 sm:grid-cols-2 gap-4 hidden">
+                <div class="space-y-1.5">
+                    <label class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Season Number</label>
+                    <input id="form-season-number" type="number" min="1" placeholder="e.g. 1" class="w-full bg-[#1E1E2E] border border-white/5 text-white text-sm rounded-xl px-4 py-2.5 placeholder-slate-500 focus:outline-none focus:border-violet-500/40 transition"/>
+                </div>
+                <div class="space-y-1.5">
+                    <label class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Episode Number</label>
+                    <input id="form-episode-number" type="number" min="1" placeholder="e.g. 3" class="w-full bg-[#1E1E2E] border border-white/5 text-white text-sm rounded-xl px-4 py-2.5 placeholder-slate-500 focus:outline-none focus:border-violet-500/40 transition"/>
+                </div>
+            </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <!-- Server Name -->
@@ -311,6 +322,9 @@ function renderTable(links) {
         const typeBadge = link.content_type === 'movie'
             ? `<span class="px-1.5 py-0.5 text-[9px] font-bold bg-[#0984E3]/20 text-[#0984E3] rounded-md">MOVIE</span>`
             : `<span class="px-1.5 py-0.5 text-[9px] font-bold bg-[#00B894]/20 text-[#00B894] rounded-md">TV</span>`;
+        const epBadge = (link.content_type === 'tv' && link.season_number !== null && link.episode_number !== null)
+            ? `<span class="px-1.5 py-0.5 text-[9px] font-bold bg-violet-500/20 text-violet-400 rounded-md">S${link.season_number} E${link.episode_number}</span>`
+            : (link.content_type === 'tv' ? `<span class="px-1.5 py-0.5 text-[9px] font-bold bg-slate-500/20 text-slate-400 rounded-md">Show Level</span>` : '');
         const qualColor = qualityColors[link.quality] || 'text-slate-300';
         const activeEl  = link.is_active
             ? `<span class="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-lg px-2 py-0.5"><span class="w-1.5 h-1.5 bg-emerald-400 rounded-full inline-block"></span>Active</span>`
@@ -321,7 +335,10 @@ function renderTable(links) {
                 <div class="flex items-center gap-3">
                     <img src="${poster}" class="w-8 h-11 rounded-lg object-cover bg-[#1E1E2E] flex-shrink-0"/>
                     <div class="min-w-0">
-                        <div class="flex items-center gap-1.5 mb-0.5">${typeBadge}</div>
+                        <div class="flex items-center gap-1.5 mb-0.5">
+                            ${typeBadge}
+                            ${epBadge}
+                        </div>
                         <a href="/details/${link.content_type}/${link.content_id}" target="_blank" class="text-xs font-bold text-white hover:text-violet-400 transition line-clamp-1">${link.content_title}</a>
                         <p class="text-[10px] text-slate-500">ID: ${link.content_id}</p>
                     </div>
@@ -413,6 +430,17 @@ function searchTmdb() {
     }, 350);
 }
 
+function toggleSeasonEpisodeFields(type) {
+    const fields = document.getElementById('season-episode-fields');
+    if (type === 'tv') {
+        fields.classList.remove('hidden');
+    } else {
+        fields.classList.add('hidden');
+        document.getElementById('form-season-number').value = '';
+        document.getElementById('form-episode-number').value = '';
+    }
+}
+
 function selectContent(content) {
     document.getElementById('form-content-type').value  = content.type;
     document.getElementById('form-content-id').value    = content.id;
@@ -428,6 +456,8 @@ function selectContent(content) {
     document.getElementById('selected-content').classList.remove('hidden');
     document.getElementById('tmdb-results').classList.add('hidden');
     document.getElementById('tmdb-search').value = '';
+
+    toggleSeasonEpisodeFields(content.type);
 }
 
 function clearSelectedContent() {
@@ -435,6 +465,7 @@ function clearSelectedContent() {
         document.getElementById(id).value = '';
     });
     document.getElementById('selected-content').classList.add('hidden');
+    toggleSeasonEpisodeFields(null);
 }
 
 // ── Add Modal ─────────────────────────────────────────────────────────────────
@@ -449,6 +480,7 @@ function openAddModal() {
     document.getElementById('tmdb-results').classList.add('hidden');
     document.getElementById('link-modal').classList.remove('hidden');
     document.body.style.overflow = 'hidden';
+    toggleSeasonEpisodeFields(null);
 }
 
 function openEditModal(link) {
@@ -469,6 +501,10 @@ function openEditModal(link) {
     document.getElementById('form-download-url').value  = link.download_url;
     document.getElementById('form-notes').value         = link.notes || '';
     document.getElementById('form-is-active').checked   = !!link.is_active;
+
+    toggleSeasonEpisodeFields(link.content_type);
+    document.getElementById('form-season-number').value = link.season_number || '';
+    document.getElementById('form-episode-number').value = link.episode_number || '';
 
     document.getElementById('link-modal').classList.remove('hidden');
     document.body.style.overflow = 'hidden';
@@ -491,11 +527,16 @@ async function submitLinkForm(event) {
         return;
     }
 
+    const seasonVal = document.getElementById('form-season-number').value;
+    const episodeVal = document.getElementById('form-episode-number').value;
+
     const payload = {
         content_type:   contentType,
         content_id:     parseInt(contentId),
         content_title:  document.getElementById('form-content-title').value,
         content_poster: document.getElementById('form-content-poster').value,
+        season_number:  (contentType === 'tv' && seasonVal) ? parseInt(seasonVal) : null,
+        episode_number: (contentType === 'tv' && episodeVal) ? parseInt(episodeVal) : null,
         server_name:    document.getElementById('form-server-name').value,
         server_icon:    document.getElementById('form-server-icon').value || '🔗',
         quality:        document.getElementById('form-quality').value,

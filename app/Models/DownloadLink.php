@@ -11,6 +11,8 @@ class DownloadLink extends Model
         'content_id',
         'content_title',
         'content_poster',
+        'season_number',
+        'episode_number',
         'server_name',
         'server_icon',
         'quality',
@@ -23,9 +25,11 @@ class DownloadLink extends Model
     ];
 
     protected $casts = [
-        'is_active'  => 'boolean',
-        'content_id' => 'integer',
-        'sort_order' => 'integer',
+        'is_active'      => 'boolean',
+        'content_id'     => 'integer',
+        'season_number'  => 'integer',
+        'episode_number' => 'integer',
+        'sort_order'     => 'integer',
     ];
 
     public function scopeActive($query)

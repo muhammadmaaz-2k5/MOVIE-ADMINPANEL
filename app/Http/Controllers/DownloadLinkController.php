@@ -12,35 +12,53 @@ class DownloadLinkController extends Controller
     /** GET /api/download-links/{type}/{id}  — fetch active links for one title */
     public function index(string $type, int $id)
     {
+        $season = request()->query('season');
+        $episode = request()->query('episode');
+
         if ($id >= 1000000000) {
             $customId = $id - 1000000000;
             $customMovie = \App\Models\CustomMovie::find($customId);
 
             if ($customMovie) {
-                // Fetch links for the custom movie version specifically
-                $customLinks = DownloadLink::forContent($type, $id)
-                    ->active()
-                    ->orderBy('sort_order')
-                    ->orderBy('quality')
-                    ->get();
+                // Try specific season/episode query first
+                $customLinksQuery = DownloadLink::forContent($type, $id)->active();
+                $baseLinksQuery = DownloadLink::forContent($type, $customMovie->tmdb_id)->active();
 
-                // Fetch links for the base movie version
-                $baseLinks = DownloadLink::forContent($type, $customMovie->tmdb_id)
-                    ->active()
-                    ->orderBy('sort_order')
-                    ->orderBy('quality')
-                    ->get();
+                if ($type === 'tv' && $season !== null && $episode !== null) {
+                    $customLinksQuery->where('season_number', (int)$season)->where('episode_number', (int)$episode);
+                    $baseLinksQuery->where('season_number', (int)$season)->where('episode_number', (int)$episode);
+                }
 
+                $customLinks = $customLinksQuery->orderBy('sort_order')->orderBy('quality')->get();
+                $baseLinks = $baseLinksQuery->orderBy('sort_order')->orderBy('quality')->get();
                 $links = $customLinks->merge($baseLinks);
+
+                // Fallback to show-level links if episode-specific links are empty
+                if ($links->isEmpty() && $type === 'tv' && $season !== null && $episode !== null) {
+                    $customLinks = DownloadLink::forContent($type, $id)->active()->whereNull('season_number')->orderBy('sort_order')->orderBy('quality')->get();
+                    $baseLinks = DownloadLink::forContent($type, $customMovie->tmdb_id)->active()->whereNull('season_number')->orderBy('sort_order')->orderBy('quality')->get();
+                    $links = $customLinks->merge($baseLinks);
+                }
+
                 return response()->json($links);
             }
         }
 
-        $links = DownloadLink::forContent($type, $id)
-            ->active()
-            ->orderBy('sort_order')
-            ->orderBy('quality')
-            ->get();
+        $linksQuery = DownloadLink::forContent($type, $id)->active();
+        if ($type === 'tv' && $season !== null && $episode !== null) {
+            $linksQuery->where('season_number', (int)$season)->where('episode_number', (int)$episode);
+        }
+        $links = $linksQuery->orderBy('sort_order')->orderBy('quality')->get();
+
+        // Fallback to show-level links
+        if ($links->isEmpty() && $type === 'tv' && $season !== null && $episode !== null) {
+            $links = DownloadLink::forContent($type, $id)
+                ->active()
+                ->whereNull('season_number')
+                ->orderBy('sort_order')
+                ->orderBy('quality')
+                ->get();
+        }
 
         return response()->json($links);
     }
@@ -71,6 +89,8 @@ class DownloadLinkController extends Controller
             'content_id'     => 'required|integer',
             'content_title'  => 'required|string|max:255',
             'content_poster' => 'nullable|string',
+            'season_number'  => 'nullable|integer',
+            'episode_number' => 'nullable|integer',
             'server_name'    => 'required|string|max:100',
             'server_icon'    => 'nullable|string|max:10',
             'quality'        => 'required|in:360p,480p,720p,1080p,2160p,4K,Blu-ray,CAM',
@@ -96,6 +116,8 @@ class DownloadLinkController extends Controller
             'content_id'     => 'sometimes|integer',
             'content_title'  => 'sometimes|string|max:255',
             'content_poster' => 'nullable|string',
+            'season_number'  => 'nullable|integer',
+            'episode_number' => 'nullable|integer',
             'server_name'    => 'sometimes|string|max:100',
             'server_icon'    => 'nullable|string|max:10',
             'quality'        => 'sometimes|in:360p,480p,720p,1080p,2160p,4K,Blu-ray,CAM',
