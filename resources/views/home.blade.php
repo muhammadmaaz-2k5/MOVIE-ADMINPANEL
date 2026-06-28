@@ -67,6 +67,16 @@
         </div>
     </div>
 
+    <!-- Custom Exclusives (Custom Manager Contents) -->
+    <div id="custom-exclusives-section" class="space-y-4 hidden">
+        <div class="flex justify-between items-center">
+            <h2 class="text-xl md:text-2xl font-extrabold tracking-tight">💎 Custom Exclusives</h2>
+        </div>
+        <div class="relative">
+            <div id="custom-exclusives-row" class="flex gap-4 overflow-x-auto no-scrollbar scroll-smooth py-1 px-0.5"></div>
+        </div>
+    </div>
+
     <!-- Dynamic Additional Sections (Similar to Mobile App) -->
     <div id="additional-sections-container" class="space-y-8 pt-4">
         <!-- Rendered dynamically via JavaScript -->
@@ -75,21 +85,9 @@
 </div>
 
 <script>
-    const homeSections = [
-        { emoji: '🔥', title: 'Trending in Cinema', params: { sort_by: 'popularity.desc' } },
-        { emoji: '🎞️', title: 'New Punjabi', params: { with_original_language: 'pa', sort_by: 'release_date.desc' } },
-        { emoji: '🏆', title: 'Top 20 Movies', params: { sort_by: 'vote_average.desc', 'vote_count.gte': '500' } },
-        { emoji: '🎬', title: 'Movies New Release', params: { sort_by: 'release_date.desc', 'release_date.lte': new Date().toISOString().substring(0, 10) } },
-        { emoji: '👊', title: 'One-Person Army Action', params: { with_genres: '28', sort_by: 'popularity.desc' } },
-        { emoji: '🪄', title: 'Fantastic Adventure Journey', params: { with_genres: '12,14', sort_by: 'popularity.desc' } },
-        { emoji: '🧗', title: 'Adventure Unfolded', params: { with_genres: '12', sort_by: 'vote_average.desc', 'vote_count.gte': '200' } },
-        { emoji: '🪦', title: 'Tomb Tales', params: { with_genres: '27,9648', sort_by: 'popularity.desc' } },
-        { emoji: '🦸', title: 'Super Hero', params: { with_keywords: '9715', sort_by: 'popularity.desc' } },
-        { emoji: '🔭', title: 'Sci-Fi Future', params: { with_genres: '878', sort_by: 'popularity.desc' } },
-        { emoji: '💗', title: 'Bollywood Love Stories', params: { with_original_language: 'hi', with_genres: '10749', sort_by: 'popularity.desc' } },
-        { emoji: '😀', title: 'Laugh Out Loud', params: { with_genres: '35', sort_by: 'popularity.desc' } },
-        { emoji: '📈', title: 'Most Trending', params: { sort_by: 'popularity.desc', 'vote_count.gte': '100' } }
-    ];
+    let homeSections = [];
+    const cacheData = {};
+    const customExclusivesCache = {};
 
     let categories = [];
     let currentCategory = 0;
@@ -97,10 +95,22 @@
     let currentSlide = 0;
     let slideInterval;
 
-    document.addEventListener("DOMContentLoaded", () => {
+    document.addEventListener("DOMContentLoaded", async () => {
         fetchCategories();
-        loadAdditionalSections();
+        await loadHomeSections();
+        loadCustomExclusives(0);
+        loadAdditionalSections(0);
     });
+
+    async function loadHomeSections() {
+        try {
+            const res = await fetch('/api/config/home-sections');
+            homeSections = await res.json();
+        } catch (err) {
+            console.error("Error loading home sections configuration:", err);
+            homeSections = [];
+        }
+    }
 
     async function fetchCategories() {
         try {
@@ -129,6 +139,14 @@
     }
 
     async function loadAllData(idx) {
+        if (cacheData[idx]) {
+            featuredList = cacheData[idx].featuredList || [];
+            renderHeroSlider();
+            renderTrendingRow(cacheData[idx].trendingItems || []);
+            renderPopularGrid(cacheData[idx].popularItems || []);
+            return;
+        }
+
         setLoadingState();
         
         const cat = categories[idx];
@@ -161,12 +179,23 @@
         }
 
         try {
-            const [trendRes, popRes] = await Promise.all([
+            // Fetch custom exclusives for this category first (or in parallel) to merge them
+            const customParams = {};
+            if (cat.mediaType && cat.mediaType !== 'all') {
+                customParams.type = cat.mediaType;
+            }
+            if (cat.trendingParams && cat.trendingParams.with_genres) {
+                customParams.genre = cat.trendingParams.with_genres;
+            }
+            const customUrlParams = new URLSearchParams(customParams);
+
+            const [trendRes, popRes, customRes] = await Promise.all([
                 fetch(`${trendingUrl}?${new URLSearchParams(trendingParams)}`).then(r => r.json()),
-                fetch(`${popularUrl}?${new URLSearchParams(popularParams)}`).then(r => r.json())
+                fetch(`${popularUrl}?${new URLSearchParams(popularParams)}`).then(r => r.json()),
+                fetch(`/api/custom-content?${customUrlParams}`).then(r => r.json()).catch(() => [])
             ]);
 
-            const trendingItems = parseItems(trendRes.results || [], cat.mediaType);
+            let trendingItems = parseItems(trendRes.results || [], cat.mediaType);
             let popularItems = parseItems(popRes.results || [], cat.mediaType);
 
             // Fallback for popular if date constraints returned sparse list
@@ -177,13 +206,29 @@
                 popularItems = parseItems(popFallback.results || [], 'movie');
             }
 
-            if (idx === 0) {
-                featuredList = trendingItems.slice(0, 3);
-                renderHeroSlider();
+            // --- ALGORITHM: Custom Exclusives Merge & Promotion ---
+            if (customRes && customRes.length > 0) {
+                const customTmdbIds = customRes.map(c => c.tmdb_id);
+                trendingItems = trendingItems.filter(item => !customTmdbIds.includes(item.id));
+                popularItems = popularItems.filter(item => !customTmdbIds.includes(item.id));
+
+                // Prepend custom exclusives to give them maximum visibility
+                trendingItems = [...customRes, ...trendingItems];
+                popularItems = [...customRes, ...popularItems];
             }
+
+            featuredList = trendingItems.slice(0, 3);
+            renderHeroSlider();
 
             renderTrendingRow(trendingItems);
             renderPopularGrid(popularItems.slice(0, 8));
+
+            // Cache results
+            cacheData[idx] = {
+                featuredList: featuredList,
+                trendingItems: trendingItems,
+                popularItems: popularItems
+            };
 
         } catch (err) {
             console.error("Error loading home page content:", err);
@@ -205,6 +250,8 @@
         document.getElementById("popular-label").innerText = cat.label === 'All' ? 'Popular This Month' : `Popular ${cat.label}s`;
 
         loadAllData(idx);
+        loadCustomExclusives(idx);
+        loadAdditionalSections(idx);
     }
 
     function parseItems(results, defaultType) {
@@ -330,55 +377,149 @@
 
     function renderTrendingRow(items) {
         const row = document.getElementById("trending-row");
-        row.innerHTML = items.map(item => `
-            <a href="/details/${item.type}/${item.id}" class="min-w-[145px] md:min-w-[170px] group flex flex-col gap-2 relative">
-                <div class="relative aspect-[2/3] rounded-2xl overflow-hidden bg-[#1E1E2E] border border-white/5 transition duration-300 group-hover:scale-[1.03] group-hover:shadow-xl group-hover:shadow-violet-500/10">
-                    <img src="${item.posterUrl}" alt="${item.title}" class="w-full h-full object-cover">
-                    <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-3">
-                        <span class="text-white text-[11px] font-bold truncate w-full">${item.title}</span>
+        row.innerHTML = items.map(item => {
+            const detailsUrl = item.is_custom ? `/details/custom/${item.custom_id}` : `/details/${item.type}/${item.id}`;
+            return `
+                <a href="${detailsUrl}" class="min-w-[145px] md:min-w-[170px] group flex flex-col gap-2 relative">
+                    <div class="relative aspect-[2/3] rounded-2xl overflow-hidden bg-[#1E1E2E] border border-white/5 transition duration-300 group-hover:scale-[1.03] group-hover:shadow-xl group-hover:shadow-violet-500/10">
+                        <img src="${item.posterUrl}" alt="${item.title}" class="w-full h-full object-cover">
+                        <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-3">
+                            <span class="text-white text-[11px] font-bold truncate w-full">${item.title}</span>
+                        </div>
                     </div>
-                </div>
-                <div class="flex items-center justify-between text-xs px-1 select-none">
-                    <span class="text-slate-400 font-bold">${item.year}</span>
-                    <span class="flex items-center gap-1 font-bold text-amber-500">
-                        <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
-                        ${item.rating}
-                    </span>
-                </div>
-            </a>
-        `).join('');
+                    <div class="flex items-center justify-between text-xs px-1 select-none">
+                        <span class="text-slate-400 font-bold">${item.year}</span>
+                        <span class="flex items-center gap-1 font-bold text-amber-500">
+                            <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
+                            ${item.rating}
+                        </span>
+                    </div>
+                </a>
+            `;
+        }).join('');
     }
 
     function renderPopularGrid(items) {
         const grid = document.getElementById("popular-grid");
-        grid.innerHTML = items.map(item => `
-            <a href="/details/${item.type}/${item.id}" class="group flex flex-col gap-2 relative">
-                <div class="relative aspect-[2/3] rounded-2xl overflow-hidden bg-[#1E1E2E] border border-white/5 transition duration-300 group-hover:scale-[1.03] group-hover:shadow-xl group-hover:shadow-violet-500/10">
-                    <img src="${item.posterUrl}" alt="${item.title}" class="w-full h-full object-cover">
-                    <!-- Rating pill top-right -->
-                    <div class="absolute top-3 right-3 px-2 py-1 glass rounded-lg flex items-center gap-1 text-[11px] font-extrabold text-amber-400 select-none">
-                        <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
-                        <span>${item.rating}</span>
+        grid.innerHTML = items.map(item => {
+            const detailsUrl = item.is_custom ? `/details/custom/${item.custom_id}` : `/details/${item.type}/${item.id}`;
+            return `
+                <a href="${detailsUrl}" class="group flex flex-col gap-2 relative">
+                    <div class="relative aspect-[2/3] rounded-2xl overflow-hidden bg-[#1E1E2E] border border-white/5 transition duration-300 group-hover:scale-[1.03] group-hover:shadow-xl group-hover:shadow-violet-500/10">
+                        <img src="${item.posterUrl}" alt="${item.title}" class="w-full h-full object-cover">
+                        <!-- Rating pill top-right -->
+                        <div class="absolute top-3 right-3 px-2 py-1 glass rounded-lg flex items-center gap-1 text-[11px] font-extrabold text-amber-400 select-none">
+                            <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
+                            <span>${item.rating}</span>
+                        </div>
                     </div>
-                </div>
-                <div class="px-1 space-y-0.5">
-                    <h3 class="text-sm font-bold text-white group-hover:text-violet-400 transition truncate w-full">${item.title}</h3>
-                    <div class="flex items-center justify-between text-xs text-slate-400">
-                        <span>${item.year}</span>
-                        <span class="uppercase text-[10px] font-extrabold bg-[#1E1E2E] px-1.5 py-0.5 rounded border border-white/5">${item.type}</span>
+                    <div class="px-1 space-y-0.5">
+                        <h3 class="text-sm font-bold text-white group-hover:text-violet-400 transition truncate w-full">${item.title}</h3>
+                        <div class="flex items-center justify-between text-xs text-slate-400">
+                            <span>${item.year}</span>
+                            <span class="uppercase text-[10px] font-extrabold bg-[#1E1E2E] px-1.5 py-0.5 rounded border border-white/5">${item.type}</span>
+                        </div>
                     </div>
-                </div>
-            </a>
-        `).join('');
+                </a>
+            `;
+        }).join('');
     }
 
-    async function loadAdditionalSections() {
+    async function loadCustomExclusives(catIdx = 0) {
+        const section = document.getElementById("custom-exclusives-section");
+        const row = document.getElementById("custom-exclusives-row");
+        if (!section || !row) return;
+
+        if (customExclusivesCache[catIdx]) {
+            const cachedRes = customExclusivesCache[catIdx];
+            if (cachedRes.length === 0) {
+                section.classList.add("hidden");
+                return;
+            }
+            section.classList.remove("hidden");
+            row.innerHTML = cachedRes.map(item => `
+                <a href="/details/custom/${item.custom_id}" class="min-w-[145px] md:min-w-[170px] group flex flex-col gap-2 relative">
+                    <div class="relative aspect-[2/3] rounded-2xl overflow-hidden bg-[#1E1E2E] border border-white/5 transition duration-300 group-hover:scale-[1.03] group-hover:shadow-xl group-hover:shadow-violet-500/10">
+                        <img src="${item.posterUrl}" alt="${item.title}" class="w-full h-full object-cover">
+                        <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-3">
+                            <span class="text-white text-[11px] font-bold truncate w-full">${item.title}</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between text-xs px-1 select-none">
+                        <span class="text-slate-400 font-bold">${item.year}</span>
+                        <span class="flex items-center gap-1 font-bold text-amber-500">
+                            <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
+                            ${item.rating}
+                        </span>
+                    </div>
+                </a>
+            `).join('');
+            return;
+        }
+
+        const cat = categories[catIdx];
+        const params = {};
+        
+        if (cat) {
+            if (cat.mediaType && cat.mediaType !== 'all') {
+                params.type = cat.mediaType;
+            }
+            if (cat.trendingParams && cat.trendingParams.with_genres) {
+                params.genre = cat.trendingParams.with_genres;
+            }
+        }
+
+        try {
+            const urlParams = new URLSearchParams(params);
+            const res = await fetch(`/api/custom-content?${urlParams}`).then(r => r.json());
+            
+            customExclusivesCache[catIdx] = res;
+
+            if (res.length === 0) {
+                section.classList.add("hidden");
+                return;
+            }
+
+            section.classList.remove("hidden");
+            row.innerHTML = res.map(item => `
+                <a href="/details/custom/${item.custom_id}" class="min-w-[145px] md:min-w-[170px] group flex flex-col gap-2 relative">
+                    <div class="relative aspect-[2/3] rounded-2xl overflow-hidden bg-[#1E1E2E] border border-white/5 transition duration-300 group-hover:scale-[1.03] group-hover:shadow-xl group-hover:shadow-violet-500/10">
+                        <img src="${item.posterUrl}" alt="${item.title}" class="w-full h-full object-cover">
+                        <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-3">
+                            <span class="text-white text-[11px] font-bold truncate w-full">${item.title}</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between text-xs px-1 select-none">
+                        <span class="text-slate-400 font-bold">${item.year}</span>
+                        <span class="flex items-center gap-1 font-bold text-amber-500">
+                            <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
+                            ${item.rating}
+                        </span>
+                    </div>
+                </a>
+            `).join('');
+        } catch (err) {
+            console.error("Error loading custom exclusives:", err);
+            section.classList.add("hidden");
+        }
+    }
+
+    const sectionCache = {};
+    let sectionObservers = [];
+
+    async function loadAdditionalSections(catIdx = 0) {
         const container = document.getElementById("additional-sections-container");
         if (!container) return;
 
+        // Disconnect any existing observers to avoid duplication
+        sectionObservers.forEach(obs => obs.disconnect());
+        sectionObservers = [];
+
+        const cat = categories[catIdx];
+
         // Render skeleton loaders for each section
         container.innerHTML = homeSections.map((sec, idx) => `
-            <div class="space-y-4" id="section-${idx}">
+            <div class="space-y-4 min-h-[220px]" id="section-${idx}">
                 <div class="flex justify-between items-center">
                     <div class="flex items-center gap-2">
                         <span class="text-xl">${sec.emoji}</span>
@@ -393,65 +534,113 @@
             </div>
         `).join('');
 
-        // Fetch each section sequentially with a staggered delay
-        for (let i = 0; i < homeSections.length; i++) {
-            const sec = homeSections[i];
-            setTimeout(async () => {
-                try {
-                    const queryParams = new URLSearchParams({
-                        ...sec.params,
-                        page: 1,
-                        include_adult: 'false'
-                    });
-                    const res = await fetch(`/api/tmdb/discover/movie?${queryParams}`).then(r => r.json());
-                    const items = parseItems(res.results || [], 'movie');
-                    
-                    const sectionDiv = document.getElementById(`section-${i}`);
-                    if (!sectionDiv) return;
-
-                    if (items.length === 0) {
-                        sectionDiv.remove();
-                        return;
-                    }
-
-                    sectionDiv.innerHTML = `
-                        <div class="flex justify-between items-center">
-                            <div class="flex items-center gap-2">
-                                <span class="text-xl">${sec.emoji}</span>
-                                <h2 class="text-xl md:text-2xl font-extrabold tracking-tight">${sec.title}</h2>
-                            </div>
-                        </div>
-                        <div class="relative">
-                            <div class="flex gap-4 overflow-x-auto no-scrollbar scroll-smooth py-1 px-0.5">
-                                ${items.map(item => `
-                                    <a href="/details/${item.type}/${item.id}" class="min-w-[145px] md:min-w-[170px] group flex flex-col gap-2 relative">
-                                        <div class="relative aspect-[2/3] rounded-2xl overflow-hidden bg-[#1E1E2E] border border-white/5 transition duration-300 group-hover:scale-[1.03] group-hover:shadow-xl group-hover:shadow-violet-500/10">
-                                            <img src="${item.posterUrl}" alt="${item.title}" class="w-full h-full object-cover">
-                                            <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-3">
-                                                <span class="text-white text-[11px] font-bold truncate w-full">${item.title}</span>
-                                            </div>
-                                        </div>
-                                        <div class="flex items-center justify-between text-xs px-1 select-none">
-                                            <span class="text-slate-400 font-bold">${item.year}</span>
-                                            <span class="flex items-center gap-1 font-bold text-amber-500">
-                                                <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
-                                                ${item.rating}
-                                            </span>
-                                        </div>
-                                    </a>
-                                `).join('')}
-                            </div>
-                        </div>
-                    `;
-                } catch (err) {
-                    console.error(`Error loading section ${sec.title}:`, err);
-                    const sectionDiv = document.getElementById(`section-${i}`);
-                    if (sectionDiv) {
-                        sectionDiv.innerHTML = `<div class="text-slate-500 text-sm py-4">Failed to load ${sec.title}</div>`;
-                    }
+        // Setup observer for each section wrapper
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const sectionIdx = parseInt(entry.target.dataset.sectionIdx);
+                    loadSectionData(sectionIdx, catIdx);
+                    observer.unobserve(entry.target);
                 }
-            }, i * 120);
+            });
+        }, {
+            rootMargin: '200px 0px', // trigger fetch when 200px from viewport
+            threshold: 0.01
+        });
+
+        sectionObservers.push(observer);
+
+        homeSections.forEach((sec, idx) => {
+            const sectionDiv = document.getElementById(`section-${idx}`);
+            if (sectionDiv) {
+                sectionDiv.dataset.sectionIdx = idx;
+                observer.observe(sectionDiv);
+            }
+        });
+    }
+
+    async function loadSectionData(i, catIdx) {
+        const cacheKey = `${catIdx}_${i}`;
+        const sectionDiv = document.getElementById(`section-${i}`);
+        if (!sectionDiv) return;
+
+        const sec = homeSections[i];
+        const cat = categories[catIdx];
+
+        if (sectionCache[cacheKey]) {
+            renderSectionHTML(sectionDiv, sectionCache[cacheKey], sec);
+            return;
         }
+
+        try {
+            const mergedParams = {
+                ...(sec.params || {}),
+                ...(cat ? (cat.trendingParams || {}) : {}),
+                page: 1,
+                include_adult: 'false'
+            };
+
+            if (sec.params && sec.params.with_genres && cat && cat.trendingParams && cat.trendingParams.with_genres) {
+                const secGenres = String(sec.params.with_genres).split(',');
+                const catGenres = String(cat.trendingParams.with_genres).split(',');
+                const uniqueGenres = Array.from(new Set([...secGenres, ...catGenres]));
+                mergedParams.with_genres = uniqueGenres.join(',');
+            }
+
+            const queryParams = new URLSearchParams(mergedParams);
+            const res = await fetch(`/api/tmdb/${sec.endpoint}?${queryParams}`).then(r => r.json());
+            
+            const defaultMediaType = sec.endpoint.includes('/tv') || sec.endpoint.includes('tv/') ? 'tv' : 'movie';
+            const items = parseItems(res.results || [], defaultMediaType);
+
+            if (items.length === 0) {
+                sectionDiv.innerHTML = '';
+                sectionDiv.style.display = 'none';
+                return;
+            }
+
+            sectionCache[cacheKey] = items;
+            renderSectionHTML(sectionDiv, items, sec);
+        } catch (err) {
+            console.error(`Error loading section ${sec.title}:`, err);
+            sectionDiv.innerHTML = `<div class="text-slate-500 text-sm py-4">Failed to load ${sec.title}</div>`;
+        }
+    }
+
+    function renderSectionHTML(sectionDiv, items, sec) {
+        sectionDiv.style.display = 'block';
+        sectionDiv.innerHTML = `
+            <div class="flex justify-between items-center">
+                <div class="flex items-center gap-2">
+                    <span class="text-xl">${sec.emoji}</span>
+                    <h2 class="text-xl md:text-2xl font-extrabold tracking-tight">${sec.title}</h2>
+                </div>
+            </div>
+            <div class="relative">
+                <div class="flex gap-4 overflow-x-auto no-scrollbar scroll-smooth py-1 px-0.5">
+                    ${items.map(item => {
+                        const detailsUrl = item.is_custom ? `/details/custom/${item.custom_id}` : `/details/${item.type}/${item.id}`;
+                        return `
+                            <a href="${detailsUrl}" class="min-w-[145px] md:min-w-[170px] group flex flex-col gap-2 relative">
+                                <div class="relative aspect-[2/3] rounded-2xl overflow-hidden bg-[#1E1E2E] border border-white/5 transition duration-300 group-hover:scale-[1.03] group-hover:shadow-xl group-hover:shadow-violet-500/10">
+                                    <img src="${item.posterUrl}" alt="${item.title}" class="w-full h-full object-cover">
+                                    <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-3">
+                                        <span class="text-white text-[11px] font-bold truncate w-full">${item.title}</span>
+                                    </div>
+                                </div>
+                                <div class="flex items-center justify-between text-xs px-1 select-none">
+                                    <span class="text-slate-400 font-bold">${item.year}</span>
+                                    <span class="flex items-center gap-1 font-bold text-amber-500">
+                                        <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
+                                        ${item.rating}
+                                    </span>
+                                </div>
+                            </a>
+                        `;
+                    }).join('')}
+                </div>
+            </div>
+        `;
     }
 
     function getMonthStartDate() {

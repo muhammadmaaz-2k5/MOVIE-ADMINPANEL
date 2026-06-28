@@ -132,6 +132,11 @@
     let isLoading = false;
     let isLoadingMore = false;
     let animeList = [];
+    const animeCache = {};
+
+    function getCacheKey(tabIdx, page) {
+        return `${tabIdx}_${page}_${JSON.stringify(activeFilters)}`;
+    }
 
     // Filter Objects
     let activeFilters = {
@@ -228,6 +233,26 @@
     }
 
     async function loadTabContent(tabIdx, page) {
+        const cacheKey = getCacheKey(tabIdx, page);
+        if (animeCache[cacheKey]) {
+            const cached = animeCache[cacheKey];
+            totalPages = cached.totalPages;
+            if (page === 1) {
+                animeList = cached.items;
+                renderGrid(animeList);
+                if (animeList.length === 0) {
+                    document.getElementById("empty-state").classList.remove("hidden");
+                }
+                isLoading = false;
+            } else {
+                animeList = [...animeList, ...cached.items];
+                appendItemsToGrid(cached.items);
+                isLoadingMore = false;
+                document.getElementById("load-more-indicator").classList.add("hidden");
+            }
+            return;
+        }
+
         if (page === 1) {
             isLoading = true;
             renderSkeletons();
@@ -241,9 +266,28 @@
         const params = buildParams(tabIdx, page);
 
         try {
+            // Fetch custom content in parallel for page 1. Since it's anime, filter by genre = 16 (Animation) and matching type
+            let customItems = [];
+            if (page === 1) {
+                const customParams = { type: type, genre: 16 };
+                customItems = await fetch(`/api/custom-content?${new URLSearchParams(customParams)}`).then(r => r.json()).catch(() => []);
+            }
+
             const res = await fetch(`/api/tmdb/discover/${type}?${new URLSearchParams(params)}`).then(r => r.json());
-            const items = parseItems(res.results || [], type);
+            let items = parseItems(res.results || [], type);
             totalPages = res.total_pages || 1;
+
+            if (page === 1 && customItems.length > 0) {
+                const customTmdbIds = customItems.map(c => c.tmdb_id);
+                items = items.filter(item => !customTmdbIds.includes(item.id));
+                items = [...customItems, ...items];
+            }
+
+            // Cache result
+            animeCache[cacheKey] = {
+                items: items,
+                totalPages: totalPages
+            };
 
             if (page === 1) {
                 animeList = items;
@@ -307,8 +351,9 @@
     }
 
     function buildCardHtml(item) {
+        const detailsUrl = item.is_custom ? `/details/custom/${item.custom_id}` : `/details/${item.type}/${item.id}`;
         return `
-            <a href="/details/${item.type}/${item.id}" class="group flex flex-col gap-2 relative">
+            <a href="${detailsUrl}" class="group flex flex-col gap-2 relative">
                 <div class="relative aspect-[2/3] rounded-2xl overflow-hidden bg-[#1E1E2E] border border-white/5 transition duration-300 group-hover:scale-[1.03] group-hover:shadow-xl group-hover:shadow-[#FF6B9D]/10">
                     <img src="${item.posterUrl}" alt="${item.title}" class="w-full h-full object-cover">
                     <!-- Rating pill top-right -->

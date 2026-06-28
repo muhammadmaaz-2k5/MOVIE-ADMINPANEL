@@ -183,6 +183,11 @@
     let isLoading = false;
     let isLoadingMore = false;
     let tvShowsList = [];
+    const tvCache = {};
+
+    function getCacheKey(tabIdx, page) {
+        return `${tabIdx}_${page}_${JSON.stringify(activeFilters)}`;
+    }
 
     // Filter Objects
     let activeFilters = {
@@ -301,6 +306,26 @@
     }
 
     async function loadTabContent(tabIdx, page) {
+        const cacheKey = getCacheKey(tabIdx, page);
+        if (tvCache[cacheKey]) {
+            const cached = tvCache[cacheKey];
+            totalPages = cached.totalPages;
+            if (page === 1) {
+                tvShowsList = cached.items;
+                renderGrid(tvShowsList);
+                if (tvShowsList.length === 0) {
+                    document.getElementById("empty-state").classList.remove("hidden");
+                }
+                isLoading = false;
+            } else {
+                tvShowsList = [...tvShowsList, ...cached.items];
+                appendItemsToGrid(cached.items);
+                isLoadingMore = false;
+                document.getElementById("load-more-indicator").classList.add("hidden");
+            }
+            return;
+        }
+
         if (page === 1) {
             isLoading = true;
             renderSkeletons();
@@ -323,9 +348,34 @@
         }
 
         try {
+            // Fetch custom content in parallel for page 1
+            let customItems = [];
+            if (page === 1) {
+                const customParams = { type: 'tv' };
+                if (tab.genreId !== null) {
+                    customParams.genre = tab.genreId;
+                } else if (activeFilters.genre !== 'All') {
+                    const gid = genreIds[activeFilters.genre];
+                    if (gid) customParams.genre = gid;
+                }
+                customItems = await fetch(`/api/custom-content?${new URLSearchParams(customParams)}`).then(r => r.json()).catch(() => []);
+            }
+
             const res = await fetch(`${url}?${new URLSearchParams(params)}`).then(r => r.json());
-            const items = parseItems(res.results || []);
+            let items = parseItems(res.results || []);
             totalPages = res.total_pages || 1;
+
+            if (page === 1 && customItems.length > 0) {
+                const customTmdbIds = customItems.map(c => c.tmdb_id);
+                items = items.filter(item => !customTmdbIds.includes(item.id));
+                items = [...customItems, ...items];
+            }
+
+            // Cache result
+            tvCache[cacheKey] = {
+                items: items,
+                totalPages: totalPages
+            };
 
             if (page === 1) {
                 tvShowsList = items;
@@ -389,8 +439,9 @@
     }
 
     function buildCardHtml(item) {
+        const detailsUrl = item.is_custom ? `/details/custom/${item.custom_id}` : `/details/${item.type}/${item.id}`;
         return `
-            <a href="/details/${item.type}/${item.id}" class="group flex flex-col gap-2 relative">
+            <a href="${detailsUrl}" class="group flex flex-col gap-2 relative">
                 <div class="relative aspect-[2/3] rounded-2xl overflow-hidden bg-[#1E1E2E] border border-white/5 transition duration-300 group-hover:scale-[1.03] group-hover:shadow-xl group-hover:shadow-[#00B894]/10">
                     <img src="${item.posterUrl}" alt="${item.title}" class="w-full h-full object-cover">
                     <!-- Rating pill top-right -->

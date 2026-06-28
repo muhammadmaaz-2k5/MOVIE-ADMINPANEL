@@ -17,7 +17,7 @@
 
     <div class="min-h-full flex flex-col md:flex-row bg-[#0B0B14]">
         <!-- Desktop Sidebar (Hidden on mobile) -->
-        <aside class="hidden md:flex flex-col w-64 fixed inset-y-0 left-0 bg-[#121220] border-r border-[#1E1E2E] px-4 py-6 z-30">
+        <aside class="hidden md:flex flex-col w-64 fixed inset-y-0 left-0 bg-[#121220] border-r border-[#1E1E2E] px-4 py-6 z-30 overflow-y-auto scrollbar-thin">
             <!-- Logo -->
             <a href="{{ route('home') }}" class="flex items-center gap-2 px-3 mb-8 select-none">
                 <span class="text-2xl font-black bg-gradient-to-r from-violet-500 to-fuchsia-500 bg-clip-text text-transparent tracking-wider">CINEMOVIE</span>
@@ -77,21 +77,6 @@
 
             <!-- Bottom utility -->
             <div class="mt-auto space-y-1.5">
-                <a href="{{ route('downloads') }}" 
-                   class="flex items-center gap-3 px-4 py-3 rounded-xl text-[14px] font-semibold text-slate-400 hover:text-slate-200 hover:bg-[#1E1E2E]/50 transition-all duration-200 {{ request()->routeIs('downloads') ? 'bg-violet-600/20 text-violet-400 border border-violet-500/20' : '' }}">
-                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                    </svg>
-                    <span>Downloads</span>
-                </a>
-                <a href="{{ route('admin.download-manager') }}" 
-                   class="flex items-center gap-3 px-4 py-3 rounded-xl text-[14px] font-semibold transition-all duration-200 {{ request()->routeIs('admin.download-manager') ? 'bg-emerald-600/20 text-emerald-400 border border-emerald-500/20' : 'text-slate-400 hover:text-slate-200 hover:bg-[#1E1E2E]/50' }}">
-                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
-                    <span>Download Manager</span>
-                </a>
                 <a href="{{ route('admin.movie-manager') }}" 
                    class="flex items-center gap-3 px-4 py-3 rounded-xl text-[14px] font-semibold transition-all duration-200 {{ request()->routeIs('admin.movie-manager') ? 'bg-violet-600/20 text-violet-400 border border-violet-500/20' : 'text-slate-400 hover:text-slate-200 hover:bg-[#1E1E2E]/50' }}">
                     <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -128,11 +113,6 @@
                     <a href="{{ route('search') }}" class="text-slate-300 hover:text-white transition">
                         <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                        </svg>
-                    </a>
-                    <a href="{{ route('downloads') }}" class="text-slate-300 hover:text-white transition">
-                        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                         </svg>
                     </a>
                 </div>

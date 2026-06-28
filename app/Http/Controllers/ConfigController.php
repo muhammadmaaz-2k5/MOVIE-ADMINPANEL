@@ -36,9 +36,16 @@ class ConfigController extends Controller
         $episode = request()->query('episode');
 
         $customMovie = null;
-        if ($id && is_numeric($id) && (int)$id >= 1000000000) {
-            $customId = (int)$id - 1000000000;
-            $customMovie = \App\Models\CustomMovie::with('streams')->find($customId);
+        if ($id && is_numeric($id)) {
+            if ((int)$id >= 1000000000) {
+                $customId = (int)$id - 1000000000;
+                $customMovie = \App\Models\CustomMovie::with('streams')->find($customId);
+            } else {
+                $customMovie = \App\Models\CustomMovie::with('streams')
+                    ->where('tmdb_id', (int)$id)
+                    ->where('is_active', true)
+                    ->first();
+            }
         }
 
         if ($customMovie) {
@@ -46,8 +53,8 @@ class ConfigController extends Controller
 
             if ($customMovie->type === 'tv' && $season && $episode) {
                 // Try to find season/episode specific streams
-                $streams = $allStreams->where('season_number', (int)$season)
-                                      ->where('episode_number', (int)$episode);
+                $streams = $allStreams->where('season_number', (int)season)
+                                      ->where('episode_number', (int)episode);
                 
                 if ($streams->isEmpty()) {
                     // Fallback to generic streams with no season
@@ -94,5 +101,24 @@ class ConfigController extends Controller
 
         $servers = DB::table('video_servers')->get();
         return response()->json($servers);
+    }
+
+    public function homeSections()
+    {
+        $sections = DB::table('home_sections')
+            ->where('is_active', true)
+            ->orderBy('sort_order')
+            ->get()
+            ->map(function($section) {
+                return [
+                    'id' => $section->id,
+                    'emoji' => $section->emoji,
+                    'title' => $section->title,
+                    'endpoint' => $section->endpoint,
+                    'params' => json_decode($section->params, true) ?: []
+                ];
+            });
+
+        return response()->json($sections);
     }
 }

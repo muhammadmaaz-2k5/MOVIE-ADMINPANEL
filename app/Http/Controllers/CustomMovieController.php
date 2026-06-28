@@ -35,6 +35,42 @@ class CustomMovieController extends Controller
         return response()->json($movie);
     }
 
+    /** GET /api/custom-content — list active custom movies/shows */
+    public function publicIndex(Request $request)
+    {
+        $query = CustomMovie::where('is_active', true);
+
+        if ($type = $request->query('type')) {
+            $query->where('type', $type);
+        }
+        
+        if ($genre = $request->query('genre')) {
+            $query->whereJsonContains('genre_ids', (int)$genre);
+        }
+
+        $limit = $request->query('limit', 20);
+        $movies = $query->orderByDesc('updated_at')->limit((int)$limit)->get();
+
+        $mapped = $movies->map(function($movie) {
+            $genreIds = is_string($movie->genre_ids) ? json_decode($movie->genre_ids, true) : $movie->genre_ids;
+            return [
+                'id' => (int)$movie->tmdb_id, // real tmdb_id for mobile app
+                'custom_id' => (int)$movie->id, // local database ID for web app custom details
+                'tmdb_id' => (int)$movie->tmdb_id,
+                'title' => $movie->title,
+                'type' => $movie->type,
+                'posterUrl' => $movie->poster_path ? (str_starts_with($movie->poster_path, 'http') ? $movie->poster_path : "https://image.tmdb.org/t/p/w342" . $movie->poster_path) : 'https://placehold.co/342x513/1E1E2E/FFF?text=No+Image',
+                'backdropUrl' => $movie->backdrop_path ? (str_starts_with($movie->backdrop_path, 'http') ? $movie->backdrop_path : "https://image.tmdb.org/t/p/w780" . $movie->backdrop_path) : '',
+                'rating' => $movie->rating ? (double)$movie->rating : 0.0,
+                'year' => $movie->year,
+                'genre_ids' => $genreIds ?: [],
+                'is_custom' => true
+            ];
+        });
+
+        return response()->json($mapped);
+    }
+
     // ── Admin CRUD API ────────────────────────────────────────────────────────
 
     /** GET /admin/api/custom-movies — list custom movies for dashboard */
