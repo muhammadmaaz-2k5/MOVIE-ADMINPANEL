@@ -94,3 +94,16 @@ Route::prefix('admin/api/custom-streams')->group(function () {
     Route::put('/{id}',    [\App\Http\Controllers\CustomMovieController::class, 'updateStream']);
     Route::delete('/{id}', [\App\Http\Controllers\CustomMovieController::class, 'destroyStream']);
 });
+
+// Download Links Public API
+Route::get('/api/download-links/{type}/{id}', [DownloadLinkController::class, 'index']);
+
+// Download Manager Admin Management
+Route::get('/admin/download-manager', [DownloadLinkController::class, 'managerView'])->name('admin.download-manager');
+Route::prefix('admin/api/download-links')->group(function () {
+    Route::get('/',              [DownloadLinkController::class, 'adminIndex']);
+    Route::post('/',             [DownloadLinkController::class, 'store']);
+    Route::put('/{id}',          [DownloadLinkController::class, 'update']);
+    Route::delete('/{id}',       [DownloadLinkController::class, 'destroy']);
+});
+

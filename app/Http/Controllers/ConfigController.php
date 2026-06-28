@@ -53,8 +53,8 @@ class ConfigController extends Controller
 
             if ($customMovie->type === 'tv' && $season && $episode) {
                 // Try to find season/episode specific streams
-                $streams = $allStreams->where('season_number', (int)season)
-                                      ->where('episode_number', (int)episode);
+                $streams = $allStreams->where('season_number', (int)$season)
+                                      ->where('episode_number', (int)$episode);
                 
                 if ($streams->isEmpty()) {
                     // Fallback to generic streams with no season
