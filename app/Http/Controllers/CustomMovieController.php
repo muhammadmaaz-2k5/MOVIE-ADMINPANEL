@@ -47,77 +47,102 @@ class CustomMovieController extends Controller
             $query->whereJsonContains('genre_ids', (int)$genre);
         }
 
+        // Parse raw query string to preserve dot-notation params like release_date.gte
+        // (PHP's $_GET converts dots to underscores, so release_date.gte becomes release_date_gte)
+        $rawGet = [];
+        $qs = $request->getQueryString();
+        if ($qs) {
+            foreach (explode('&', $qs) as $pair) {
+                if (str_contains($pair, '=')) {
+                    [$k, $v] = explode('=', $pair, 2);
+                    $rawGet[urldecode($k)] = urldecode($v);
+                } else {
+                    $rawGet[urldecode($pair)] = '';
+                }
+            }
+        }
+
         // 1. Language Filter
-        $langCode = $request->query('with_original_language') ?: $request->query('language');
+        // Language filter takes priority over country filter to prevent AND conflicts
+        // (e.g., US=English AND Hindi Dub would return zero results)
+        $langCode = $rawGet['with_original_language'] ?? null;
+        $hasLanguageFilter = false;
         if ($langCode) {
+            // Strip OR expression added for TMDB (e.g. 'en|hi') - for custom DB use only the target lang
+            if (str_contains($langCode, '|')) {
+                $parts = explode('|', $langCode);
+                $langCode = count($parts) > 1 ? end($parts) : $parts[0];
+            }
             $langCode = strtolower(explode('-', $langCode)[0]);
             $langMap = [
                 'hi' => 'Hindi',
                 'pa' => 'Punjabi',
                 'ta' => 'Tamil',
                 'te' => 'Telugu',
+                'ml' => 'Malayalam',
+                'kn' => 'Kannada',
                 'bn' => 'Bengali',
                 'ur' => 'Urdu',
                 'ar' => 'Arabic',
                 'es' => 'Spanish',
                 'fr' => 'French',
                 'en' => 'English',
+                'ja' => 'Japanese',
+                'ko' => 'Korean',
+                'zh' => 'Chinese',
             ];
             $langName = $langMap[$langCode] ?? null;
             if ($langName) {
                 $query->where('language', 'like', "%{$langName}%");
+                $hasLanguageFilter = true;
             } else {
                 $query->whereRaw('1 = 0');
             }
         }
 
-        // 2. Year Filter
-        $year = $request->query('year') 
-             ?: $request->query('primary_release_year') 
-             ?: $request->query('first_air_date_year');
-             
+        // 2. Year Filter - read from $_GET for dot-notation support
+        $year = $rawGet['year'] ?? $rawGet['primary_release_year'] ?? $rawGet['first_air_date_year'] ?? null;
         if ($year && is_numeric($year)) {
             $query->where('year', $year);
         } else {
-            $releaseGte = $request->query('primary_release_date.gte') 
-                       ?: $request->query('release_date.gte') 
-                       ?: $request->query('first_air_date.gte');
+            $releaseGte = $rawGet['release_date.gte'] ?? $rawGet['primary_release_date.gte'] ?? $rawGet['first_air_date.gte'] ?? null;
             if ($releaseGte && preg_match('/^(\d{4})/', $releaseGte, $m)) {
                 $query->where('year', '>=', $m[1]);
             }
-            $releaseLte = $request->query('primary_release_date.lte') 
-                       ?: $request->query('release_date.lte') 
-                       ?: $request->query('first_air_date.lte');
+            $releaseLte = $rawGet['release_date.lte'] ?? $rawGet['primary_release_date.lte'] ?? $rawGet['first_air_date.lte'] ?? null;
             if ($releaseLte && preg_match('/^(\d{4})/', $releaseLte, $m)) {
                 $query->where('year', '<=', $m[1]);
             }
         }
 
-        // 3. Country Filter
-        $countryToLanguages = [
-            'US' => ['English', 'en'],
-            'GB' => ['English', 'en'],
-            'JP' => ['Japanese', 'ja'],
-            'KR' => ['Korean', 'ko'],
-            'IN' => ['Hindi', 'hi', 'Punjabi', 'pa', 'Tamil', 'ta', 'Telugu', 'te', 'Bengali', 'bn', 'Urdu', 'ur', 'Malayalam', 'ml', 'Kannada', 'kn'],
-            'PK' => ['Urdu', 'ur', 'Punjabi', 'pa'],
-            'ES' => ['Spanish', 'es'],
-            'FR' => ['French', 'fr'],
-            'CN' => ['Chinese', 'zh'],
-            'AR' => ['Arabic', 'ar']
-        ];
-        $countryCode = $request->query('with_origin_country') ?: $request->query('region');
-        if ($countryCode) {
-            $countryCode = strtoupper($countryCode);
-            if (isset($countryToLanguages[$countryCode])) {
-                $allowedLangs = $countryToLanguages[$countryCode];
-                $query->where(function($q) use ($allowedLangs) {
-                    foreach ($allowedLangs as $lang) {
-                        $q->orWhere('language', 'like', "%{$lang}%");
-                    }
-                });
-            } else {
-                $query->whereRaw('1 = 0');
+        // 3. Country Filter - skip if language filter is already applied
+        // (Language takes priority to avoid AND conflict: e.g. US=English AND Hindi Dub = no results)
+        if (!$hasLanguageFilter) {
+            $countryToLanguages = [
+                'US' => ['English', 'en'],
+                'GB' => ['English', 'en'],
+                'JP' => ['Japanese', 'ja'],
+                'KR' => ['Korean', 'ko'],
+                'IN' => ['Hindi', 'hi', 'Punjabi', 'pa', 'Tamil', 'ta', 'Telugu', 'te', 'Bengali', 'bn', 'Urdu', 'ur', 'Malayalam', 'ml', 'Kannada', 'kn'],
+                'PK' => ['Urdu', 'ur', 'Punjabi', 'pa'],
+                'ES' => ['Spanish', 'es'],
+                'FR' => ['French', 'fr'],
+                'CN' => ['Chinese', 'zh'],
+                'AR' => ['Arabic', 'ar']
+            ];
+            $countryCode = $rawGet['with_origin_country'] ?? $rawGet['region'] ?? null;
+            if ($countryCode) {
+                $countryCode = strtoupper($countryCode);
+                if (isset($countryToLanguages[$countryCode])) {
+                    $allowedLangs = $countryToLanguages[$countryCode];
+                    $query->where(function($q) use ($allowedLangs) {
+                        foreach ($allowedLangs as $lang) {
+                            $q->orWhere('language', 'like', "%{$lang}%");
+                        }
+                    });
+                } else {
+                    $query->whereRaw('1 = 0');
+                }
             }
         }
 
