@@ -134,10 +134,25 @@ class TmdbProxyController extends Controller
                     $dbQuery->where('type', 'tv');
                 }
                 
+                $this->applyFilters($dbQuery, $request);
+
                 $customMovies = $dbQuery->get();
                 
                 // Format custom movies to match TMDB search structure
-                $customResults = $customMovies->map(function ($m) {
+                $resultsList = isset($tmdbResults['results']) ? $tmdbResults['results'] : [];
+
+                // Format custom movies to match TMDB search structure
+                $customResults = $customMovies->map(function ($m) use ($resultsList) {
+                    $popularity = 100.0;
+                    foreach ($resultsList as $item) {
+                        if (isset($item['id']) && $item['id'] == $m->tmdb_id) {
+                            $popularity = isset($item['popularity']) ? (float)$item['popularity'] : 100.0;
+                            // Add small boost to rank the custom version right above the original TMDB version
+                            $popularity += 0.001;
+                            break;
+                        }
+                    }
+
                     return [
                         'id' => self::OFFSET + $m->id, // Offset ID
                         'title' => $m->title,
@@ -150,13 +165,13 @@ class TmdbProxyController extends Controller
                         'release_date' => $m->year ? "{$m->year}-01-01" : null,
                         'first_air_date' => $m->year ? "{$m->year}-01-01" : null,
                         'vote_average' => $m->rating,
+                        'popularity' => $popularity,
                         'is_custom' => true,
                         'language' => $m->language
                     ];
                 })->toArray();
 
                 // Merge: custom movies first, then TMDB results
-                $resultsList = isset($tmdbResults['results']) ? $tmdbResults['results'] : [];
                 $mergedResults = array_merge($customResults, $resultsList);
 
                 $tmdbResults['results'] = $mergedResults;
@@ -178,46 +193,7 @@ class TmdbProxyController extends Controller
                 
                 // Start building DB query
                 $dbQuery = CustomMovie::where('is_active', true)->where('type', $type);
-
-                // Language filtering
-                if ($langCode) {
-                    $langMap = [
-                        'hi' => 'Hindi',
-                        'pa' => 'Punjabi',
-                        'ta' => 'Tamil',
-                        'te' => 'Telugu',
-                        'bn' => 'Bengali',
-                        'ur' => 'Urdu',
-                        'ar' => 'Arabic',
-                        'es' => 'Spanish',
-                        'fr' => 'French',
-                        'en' => 'English',
-                    ];
-                    $langName = $langMap[strtolower($langCode)] ?? null;
-                    if ($langName) {
-                        $dbQuery->where('language', 'like', "%{$langName}%");
-                    } else {
-                        // If language requested is not custom, don't return custom movies
-                        $dbQuery->whereRaw('1 = 0');
-                    }
-                }
-
-                // Genre filtering
-                if ($genreId) {
-                    // Extract first genre ID if comma-separated
-                    $gid = (int)head(explode(',', $genreId));
-                    if ($gid > 0) {
-                        $dbQuery->whereJsonContains('genre_ids', $gid);
-                    }
-                }
-
-                // Year filtering
-                if ($releaseGte) {
-                    $year = substr($releaseGte, 0, 4);
-                    if (is_numeric($year)) {
-                        $dbQuery->where('year', $year);
-                    }
-                }
+                $this->applyFilters($dbQuery, $request);
 
                 $customMovies = $dbQuery->get();
 
@@ -324,5 +300,95 @@ class TmdbProxyController extends Controller
                 'message' => $e->getMessage()
             ], 500);
         }
+    }
+
+    private function applyFilters($dbQuery, Request $request)
+    {
+        // 1. Language Filter
+        $langCode = $request->query('with_original_language') ?: $request->query('language');
+        if ($langCode) {
+            $langCode = strtolower(explode('-', $langCode)[0]);
+            $langMap = [
+                'hi' => 'Hindi',
+                'pa' => 'Punjabi',
+                'ta' => 'Tamil',
+                'te' => 'Telugu',
+                'bn' => 'Bengali',
+                'ur' => 'Urdu',
+                'ar' => 'Arabic',
+                'es' => 'Spanish',
+                'fr' => 'French',
+                'en' => 'English',
+            ];
+            $langName = $langMap[$langCode] ?? null;
+            if ($langName) {
+                $dbQuery->where('language', 'like', "%{$langName}%");
+            } else {
+                $dbQuery->whereRaw('1 = 0'); // force empty if requested language is not supported
+            }
+        }
+
+        // 2. Genre Filter
+        if ($genreId = $request->query('with_genres')) {
+            $genres = explode(',', $genreId);
+            $dbQuery->where(function($q) use ($genres) {
+                foreach ($genres as $gid) {
+                    $q->orWhereJsonContains('genre_ids', (int)$gid);
+                }
+            });
+        }
+
+        // 3. Year Filter
+        $year = $request->query('year') 
+             ?: $request->query('primary_release_year') 
+             ?: $request->query('first_air_date_year');
+             
+        if ($year && is_numeric($year)) {
+            $dbQuery->where('year', $year);
+        } else {
+            $releaseGte = $request->query('primary_release_date.gte') 
+                       ?: $request->query('release_date.gte') 
+                       ?: $request->query('first_air_date.gte');
+            if ($releaseGte && preg_match('/^(\d{4})/', $releaseGte, $m)) {
+                $dbQuery->where('year', '>=', $m[1]);
+            }
+            $releaseLte = $request->query('primary_release_date.lte') 
+                       ?: $request->query('release_date.lte') 
+                       ?: $request->query('first_air_date.lte');
+            if ($releaseLte && preg_match('/^(\d{4})/', $releaseLte, $m)) {
+                $dbQuery->where('year', '<=', $m[1]);
+            }
+        }
+
+        // 4. Country Filter
+        $countryToLanguages = [
+            'US' => ['English', 'en'],
+            'GB' => ['English', 'en'],
+            'JP' => ['Japanese', 'ja'],
+            'KR' => ['Korean', 'ko'],
+            'IN' => ['Hindi', 'hi', 'Punjabi', 'pa', 'Tamil', 'ta', 'Telugu', 'te', 'Bengali', 'bn', 'Urdu', 'ur', 'Malayalam', 'ml', 'Kannada', 'kn'],
+            'PK' => ['Urdu', 'ur', 'Punjabi', 'pa'],
+            'ES' => ['Spanish', 'es'],
+            'FR' => ['French', 'fr'],
+            'CN' => ['Chinese', 'zh'],
+            'AR' => ['Arabic', 'ar']
+        ];
+
+        $countryCode = $request->query('with_origin_country') ?: $request->query('region');
+        if ($countryCode) {
+            $countryCode = strtoupper($countryCode);
+            if (isset($countryToLanguages[$countryCode])) {
+                $allowedLangs = $countryToLanguages[$countryCode];
+                $dbQuery->where(function($q) use ($allowedLangs) {
+                    foreach ($allowedLangs as $lang) {
+                        $q->orWhere('language', 'like', "%{$lang}%");
+                    }
+                });
+            } else {
+                $dbQuery->whereRaw('1 = 0'); // force empty if country has no mapped language
+            }
+        }
+
+        return $dbQuery;
     }
 }

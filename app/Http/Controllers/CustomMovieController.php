@@ -35,7 +35,6 @@ class CustomMovieController extends Controller
         return response()->json($movie);
     }
 
-    /** GET /api/custom-content — list active custom movies/shows */
     public function publicIndex(Request $request)
     {
         $query = CustomMovie::where('is_active', true);
@@ -48,13 +47,97 @@ class CustomMovieController extends Controller
             $query->whereJsonContains('genre_ids', (int)$genre);
         }
 
+        // 1. Language Filter
+        $langCode = $request->query('with_original_language') ?: $request->query('language');
+        if ($langCode) {
+            $langCode = strtolower(explode('-', $langCode)[0]);
+            $langMap = [
+                'hi' => 'Hindi',
+                'pa' => 'Punjabi',
+                'ta' => 'Tamil',
+                'te' => 'Telugu',
+                'bn' => 'Bengali',
+                'ur' => 'Urdu',
+                'ar' => 'Arabic',
+                'es' => 'Spanish',
+                'fr' => 'French',
+                'en' => 'English',
+            ];
+            $langName = $langMap[$langCode] ?? null;
+            if ($langName) {
+                $query->where('language', 'like', "%{$langName}%");
+            } else {
+                $query->whereRaw('1 = 0');
+            }
+        }
+
+        // 2. Year Filter
+        $year = $request->query('year') 
+             ?: $request->query('primary_release_year') 
+             ?: $request->query('first_air_date_year');
+             
+        if ($year && is_numeric($year)) {
+            $query->where('year', $year);
+        } else {
+            $releaseGte = $request->query('primary_release_date.gte') 
+                       ?: $request->query('release_date.gte') 
+                       ?: $request->query('first_air_date.gte');
+            if ($releaseGte && preg_match('/^(\d{4})/', $releaseGte, $m)) {
+                $query->where('year', '>=', $m[1]);
+            }
+            $releaseLte = $request->query('primary_release_date.lte') 
+                       ?: $request->query('release_date.lte') 
+                       ?: $request->query('first_air_date.lte');
+            if ($releaseLte && preg_match('/^(\d{4})/', $releaseLte, $m)) {
+                $query->where('year', '<=', $m[1]);
+            }
+        }
+
+        // 3. Country Filter
+        $countryToLanguages = [
+            'US' => ['English', 'en'],
+            'GB' => ['English', 'en'],
+            'JP' => ['Japanese', 'ja'],
+            'KR' => ['Korean', 'ko'],
+            'IN' => ['Hindi', 'hi', 'Punjabi', 'pa', 'Tamil', 'ta', 'Telugu', 'te', 'Bengali', 'bn', 'Urdu', 'ur', 'Malayalam', 'ml', 'Kannada', 'kn'],
+            'PK' => ['Urdu', 'ur', 'Punjabi', 'pa'],
+            'ES' => ['Spanish', 'es'],
+            'FR' => ['French', 'fr'],
+            'CN' => ['Chinese', 'zh'],
+            'AR' => ['Arabic', 'ar']
+        ];
+        $countryCode = $request->query('with_origin_country') ?: $request->query('region');
+        if ($countryCode) {
+            $countryCode = strtoupper($countryCode);
+            if (isset($countryToLanguages[$countryCode])) {
+                $allowedLangs = $countryToLanguages[$countryCode];
+                $query->where(function($q) use ($allowedLangs) {
+                    foreach ($allowedLangs as $lang) {
+                        $q->orWhere('language', 'like', "%{$lang}%");
+                    }
+                });
+            } else {
+                $query->whereRaw('1 = 0');
+            }
+        }
+
+        // 4. Sort By
+        $sortBy = $request->query('sort_by', 'popularity.desc');
+        if ($sortBy === 'vote_average.desc') {
+            $query->orderByDesc('rating');
+        } elseif ($sortBy === 'release_date.desc' || $sortBy === 'first_air_date.desc') {
+            $query->orderByDesc('year');
+        } else {
+            $query->orderByDesc('updated_at'); // default Hottest
+        }
+
         $limit = $request->query('limit', 20);
-        $movies = $query->orderByDesc('updated_at')->limit((int)$limit)->get();
+        $movies = $query->limit((int)$limit)->get();
 
         $mapped = $movies->map(function($movie) {
             $genreIds = is_string($movie->genre_ids) ? json_decode($movie->genre_ids, true) : $movie->genre_ids;
             return [
-                'id' => (int)$movie->tmdb_id, // real tmdb_id for mobile app
+                'id' => 1000000000 + (int)$movie->id, // 1 Billion Offset ID for custom details/streams
                 'custom_id' => (int)$movie->id, // local database ID for web app custom details
                 'tmdb_id' => (int)$movie->tmdb_id,
                 'title' => $movie->title,
