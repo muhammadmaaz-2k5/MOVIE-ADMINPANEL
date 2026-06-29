@@ -25,10 +25,17 @@ class VideoServerSeeder extends Seeder
             ],
             [
                 'name' => 'vidsrc',
-                'label' => 'Vidsrc',
-                'icon' => '🌍',
+                'label' => 'VidSrc',
+                'icon' => '▶',
                 'movie_url_template' => 'https://vidsrc.to/embed/movie/{id}',
                 'tv_url_template' => 'https://vidsrc.to/embed/tv/{id}/{season}/{episode}'
+            ],
+            [
+                'name' => 'vidlink',
+                'label' => 'VidLink',
+                'icon' => '⚡',
+                'movie_url_template' => 'https://vidlink.pro/movie/{id}?primaryColor=B20710&secondaryColor=170000&icons=vid&iconColor=B20710&title=false&poster=true&autoplay=false&nextbutton=true',
+                'tv_url_template' => 'https://vidlink.pro/tv/{id}/{season}/{episode}?primaryColor=B20710&secondaryColor=170000&icons=vid&iconColor=B20710&title=false&poster=true&autoplay=false&nextbutton=true'
             ]
         ];
 

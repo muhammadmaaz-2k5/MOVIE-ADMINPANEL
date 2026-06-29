@@ -60,6 +60,10 @@ Route::prefix('admin/api/home-sections')->group(function () {
     Route::delete('/{id}', [App\Http\Controllers\HomeSectionController::class, 'destroy']);
 });
 
+// Notification Manager
+Route::get('/admin/notification-manager', [\App\Http\Controllers\NotificationController::class, 'managerView'])->name('admin.notification-manager');
+Route::post('/admin/api/notifications/send', [\App\Http\Controllers\NotificationController::class, 'send']);
+
 // Custom Movies Public API
 Route::get('/api/custom-content', [\App\Http\Controllers\CustomMovieController::class, 'publicIndex']);
 Route::get('/api/search/custom', [\App\Http\Controllers\CustomMovieController::class, 'search']);
