@@ -26,6 +26,7 @@ class DatabaseSeeder extends Seeder
             CategorySeeder::class,
             VideoServerSeeder::class,
             HomeSectionSeeder::class,
+            AdSeeder::class,
         ]);
     }
 }

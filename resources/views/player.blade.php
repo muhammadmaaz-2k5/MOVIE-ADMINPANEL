@@ -92,23 +92,55 @@
 <div id="toast" class="fixed bottom-6 left-1/2 transform -translate-x-1/2 glass px-5 py-3 rounded-xl text-xs font-bold text-white shadow-xl pointer-events-none opacity-0 transition-opacity duration-300 z-50"></div>
 
 <script>
-    const type = "{{ $type }}";
-    const id = {{ $id }};
-    let targetType = type;
-    let targetTmdbId = id;
-    let activeSeason = {{ $season ?? 'null' }};
-    let activeEpisode = {{ $episode ?? 'null' }};
-    let activeServer = 0;
-    let tvDetails = null;
-    let servers = [];
-    let customMovieData = null;
+     const type = "{{ $type }}";
+     const id = {{ $id }};
+     let targetType = type;
+     let targetTmdbId = id;
+     let activeSeason = {{ $season ?? 'null' }};
+     let activeEpisode = {{ $episode ?? 'null' }};
+     let activeServer = 0;
+     let tvDetails = null;
+     let servers = [];
+     let customMovieData = null;
+     let webViewAds = { top: [], bottom: [] };
 
-    document.addEventListener("DOMContentLoaded", () => {
-        fetchServers();
-        initIframeListener();
-    });
+     document.addEventListener("DOMContentLoaded", () => {
+         fetchServers();
+         initIframeListener();
+         loadWebViewAds();
+     });
 
-    async function fetchServers() {
+     async function loadWebViewAds() {
+         try {
+             const ads = await fetch('/api/config/webview-ads').then(r => r.json());
+             ads.forEach(ad => {
+                 if (ad.position === 'top') webViewAds.top.push(ad.ad_code);
+                 if (ad.position === 'bottom') webViewAds.bottom.push(ad.ad_code);
+                 if (ad.position === 'both') {
+                     webViewAds.top.push(ad.ad_code);
+                     webViewAds.bottom.push(ad.ad_code);
+                 }
+             });
+             renderWebViewAds();
+         } catch (err) {
+             console.error("Error loading webview ads:", err);
+         }
+     }
+
+     function renderWebViewAds() {
+         const playerContainer = document.querySelector('.aspect-video');
+         if (!playerContainer || webViewAds.top.length === 0) return;
+         
+         // Top ads
+         if (webViewAds.top.length > 0) {
+             const topAdContainer = document.createElement('div');
+             topAdContainer.id = 'top-webview-ads';
+             topAdContainer.innerHTML = webViewAds.top.join('');
+             playerContainer.parentNode.insertBefore(topAdContainer, playerContainer);
+         }
+     }
+
+     async function fetchServers() {
         try {
             if (type === 'custom' || id >= 1000000000) {
                 const dbId = id >= 1000000000 ? id - 1000000000 : id;
