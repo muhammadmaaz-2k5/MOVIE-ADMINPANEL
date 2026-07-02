@@ -48,12 +48,11 @@ Route::get('/languages', function () {
 Route::get('/api/config/categories', [\App\Http\Controllers\ConfigController::class, 'categories']);
 Route::get('/api/config/servers',    [\App\Http\Controllers\ConfigController::class, 'servers']);
 Route::get('/api/config/home-sections', [\App\Http\Controllers\ConfigController::class, 'homeSections']);
-Route::get('/api/config/webview-ads', [\App\Http\Controllers\WebViewAdController::class, 'publicIndex']);
-Route::get('/api/config/button-ads', [\App\Http\Controllers\ButtonAdController::class, 'publicIndex']);
+Route::get('/api/config/settings',    [\App\Http\Controllers\ConfigController::class, 'globalSettings']);
 
-Route::get('/api/tmdb/{path}', [TmdbProxyController::class, 'proxy'])->where('path', '.*');
+// TMDB Proxy API
+Route::get('/api/tmdb/{any}', [\App\Http\Controllers\TmdbProxyController::class, 'proxy'])->where('any', '.*');
 
-// Home Sections Admin Management
 Route::get('/admin/home-section-manager', [\App\Http\Controllers\HomeSectionController::class, 'managerView'])->name('admin.home-section-manager');
 Route::prefix('admin/api/home-sections')->group(function () {
     Route::get('/', [App\Http\Controllers\HomeSectionController::class, 'index']);
@@ -62,22 +61,13 @@ Route::prefix('admin/api/home-sections')->group(function () {
     Route::delete('/{id}', [App\Http\Controllers\HomeSectionController::class, 'destroy']);
 });
 
-// WebView Ads Admin Management
-Route::get('/admin/webview-ad-manager', [\App\Http\Controllers\WebViewAdController::class, 'managerView'])->name('admin.webview-ad-manager');
-Route::prefix('admin/api/webview-ads')->group(function () {
-    Route::get('/', [\App\Http\Controllers\WebViewAdController::class, 'index']);
-    Route::post('/', [\App\Http\Controllers\WebViewAdController::class, 'store']);
-    Route::put('/{id}', [\App\Http\Controllers\WebViewAdController::class, 'update']);
-    Route::delete('/{id}', [\App\Http\Controllers\WebViewAdController::class, 'destroy']);
-});
 
-// Button Ads Admin Management
-Route::get('/admin/button-ad-manager', [\App\Http\Controllers\ButtonAdController::class, 'managerView'])->name('admin.button-ad-manager');
-Route::prefix('admin/api/button-ads')->group(function () {
-    Route::get('/', [\App\Http\Controllers\ButtonAdController::class, 'index']);
-    Route::post('/', [\App\Http\Controllers\ButtonAdController::class, 'store']);
-    Route::put('/{id}', [\App\Http\Controllers\ButtonAdController::class, 'update']);
-    Route::delete('/{id}', [\App\Http\Controllers\ButtonAdController::class, 'destroy']);
+Route::get('/admin/settings', function () { return view('admin.settings'); })->name('admin.settings');
+Route::prefix('admin/api/settings')->group(function () {
+    Route::get('/', [\App\Http\Controllers\SettingsController::class, 'index']);
+    Route::put('/', [\App\Http\Controllers\SettingsController::class, 'update']);
+    Route::post('/enable-all-ads', [\App\Http\Controllers\SettingsController::class, 'enableAllAds']);
+    Route::post('/disable-all-ads', [\App\Http\Controllers\SettingsController::class, 'disableAllAds']);
 });
 
 // Notification Manager

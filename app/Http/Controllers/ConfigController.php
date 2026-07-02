@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Setting;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -120,5 +121,10 @@ class ConfigController extends Controller
             });
 
         return response()->json($sections);
+    }
+
+    public function globalSettings()
+    {
+        return response()->json(SettingsController::buildSettingsResponse());
     }
 }

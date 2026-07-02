@@ -112,20 +112,12 @@
                     </svg>
                     <span>Home Sections</span>
                 </a>
-                <a href="{{ route('admin.webview-ad-manager') }}" 
-                   class="flex items-center gap-3 px-4 py-3 rounded-xl text-[14px] font-semibold transition-all duration-200 {{ request()->routeIs('admin.webview-ad-manager') ? 'bg-violet-600/20 text-violet-400 border border-violet-500/20' : 'text-slate-400 hover:text-slate-200 hover:bg-[#1E1E2E]/50' }}">
+                <a href="{{ route('admin.settings') }}" 
+                   class="flex items-center gap-3 px-4 py-3 rounded-xl text-[14px] font-semibold transition-all duration-200 {{ request()->routeIs('admin.settings') ? 'bg-violet-600/20 text-violet-400 border border-violet-500/20' : 'text-slate-400 hover:text-slate-200 hover:bg-[#1E1E2E]/50' }}">
                     <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 7h6m0 0l-3 3m3-3L9 7zM7 17h2m-2 0h2m-2 0v-2m0 2v2m0-2V9m0 8v2m0-2h2m-2 0h2m-2 0v-2m0 2v2"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.667 2.153-1.667 2.58 0l.399 1.716a2.5 2.5 0 002.34.177l1.717-.399c1.667-.426 1.667-2.153 0-2.58l-1.717-.399a2.5 2.5 0 00-2.34.177l-.399 1.717zm-5.16 9.117c.426-1.667 2.153-1.667 2.58 0l.399 1.717a2.5 2.5 0 002.34.176l1.717-.399c1.667-.426 1.667-2.153 0-2.58l-1.717-.399a2.5 2.5 0 00-2.34.176l-.399 1.717z"/>
                     </svg>
-                    <span>WebView Ads</span>
-                </a>
-                <a href="{{ route('admin.button-ad-manager') }}" 
-                   class="flex items-center gap-3 px-4 py-3 rounded-xl text-[14px] font-semibold transition-all duration-200 {{ request()->routeIs('admin.button-ad-manager') ? 'bg-violet-600/20 text-violet-400 border border-violet-500/20' : 'text-slate-400 hover:text-slate-200 hover:bg-[#1E1E2E]/50' }}">
-                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" fill="none"/>
-                        <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2" fill="none"/>
-                    </svg>
-                    <span>Button Ads</span>
+                    <span>Settings</span>
                 </a>
                 <a href="{{ route('admin.notification-manager') }}" 
                    class="flex items-center gap-3 px-4 py-3 rounded-xl text-[14px] font-semibold transition-all duration-200 {{ request()->routeIs('admin.notification-manager') ? 'bg-violet-600/20 text-violet-400 border border-violet-500/20' : 'text-slate-400 hover:text-slate-200 hover:bg-[#1E1E2E]/50' }}">

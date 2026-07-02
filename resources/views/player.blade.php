@@ -102,45 +102,11 @@
      let tvDetails = null;
      let servers = [];
      let customMovieData = null;
-     let webViewAds = { top: [], bottom: [] };
 
-     document.addEventListener("DOMContentLoaded", () => {
-         fetchServers();
-         initIframeListener();
-         loadWebViewAds();
-     });
-
-     async function loadWebViewAds() {
-         try {
-             const ads = await fetch('/api/config/webview-ads').then(r => r.json());
-             ads.forEach(ad => {
-                 if (ad.position === 'top') webViewAds.top.push(ad.ad_code);
-                 if (ad.position === 'bottom') webViewAds.bottom.push(ad.ad_code);
-                 if (ad.position === 'both') {
-                     webViewAds.top.push(ad.ad_code);
-                     webViewAds.bottom.push(ad.ad_code);
-                 }
-             });
-             renderWebViewAds();
-         } catch (err) {
-             console.error("Error loading webview ads:", err);
-         }
-     }
-
-     function renderWebViewAds() {
-         const playerContainer = document.querySelector('.aspect-video');
-         if (!playerContainer || webViewAds.top.length === 0) return;
-         
-         // Top ads
-         if (webViewAds.top.length > 0) {
-             const topAdContainer = document.createElement('div');
-             topAdContainer.id = 'top-webview-ads';
-             topAdContainer.innerHTML = webViewAds.top.join('');
-             playerContainer.parentNode.insertBefore(topAdContainer, playerContainer);
-         }
-     }
-
-     async function fetchServers() {
+      document.addEventListener("DOMContentLoaded", () => {
+          fetchServers();
+          initIframeListener();
+      });
         try {
             if (type === 'custom' || id >= 1000000000) {
                 const dbId = id >= 1000000000 ? id - 1000000000 : id;
