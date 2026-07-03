@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\DownloadLink;
+use App\Models\Setting;
 use Illuminate\Http\Request;
 
 class DownloadLinkController extends Controller
@@ -12,6 +13,10 @@ class DownloadLinkController extends Controller
     /** GET /api/download-links/{type}/{id}  — fetch active links for one title */
     public function index(string $type, int $id)
     {
+        if (Setting::isSafeReviewMode()) {
+            return response()->json(['error' => 'Downloads are disabled in Safe Review Mode.'], 403);
+        }
+
         $season = request()->query('season');
         $episode = request()->query('episode');
 

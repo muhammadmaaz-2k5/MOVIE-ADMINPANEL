@@ -53,21 +53,30 @@
 
                 <!-- Main Action Buttons -->
                 <div class="flex flex-wrap gap-3 justify-center md:justify-start pt-3">
+                    @if($isLiveMode)
                     <a id="watch-now-btn" href="" class="inline-flex items-center gap-2 bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white font-extrabold px-8 py-3.5 rounded-2xl hover:from-violet-500 hover:to-fuchsia-500 transition duration-200 shadow-xl shadow-violet-500/20 text-sm">
                         <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
                         <span>Watch Now</span>
                     </a>
+                    @else
+                    <span class="inline-flex items-center gap-2 bg-sky-600/20 border border-sky-500/30 text-sky-300 font-extrabold px-6 py-3.5 rounded-2xl text-sm">
+                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                        <span>Review Mode — Info Only</span>
+                    </span>
+                    @endif
                     
                     <button onclick="toggleFavorite()" id="favorite-btn" class="p-3.5 rounded-2xl bg-[#1E1E2E] border border-white/5 hover:border-violet-500/20 hover:text-rose-500 transition duration-200 text-slate-300">
                         <svg id="fav-icon" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg>
                     </button>
 
+                    @if($isLiveMode)
                     <button id="download-btn" onclick="openDownloadModal()" class="inline-flex items-center gap-2 bg-[#1E1E2E] border border-white/5 text-slate-300 font-extrabold px-6 py-3.5 rounded-2xl hover:bg-white/5 hover:text-white hover:border-violet-500/20 transition duration-200 text-sm">
                         <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                         </svg>
                         <span>Download Links</span>
                     </button>
+                    @endif
                 </div>
             </div>
         </div>
@@ -204,6 +213,7 @@
 <script>
     const type = "{{ $type }}";
     const id = {{ $id }};
+    const IS_LIVE_MODE = @json($isLiveMode);
     let targetType = type;
     let targetTmdbId = id;
     let isFavorite = false;
@@ -427,7 +437,12 @@
             document.getElementById("meta-language").innerText = spokenLang;
 
             // Watch Now Link
-            document.getElementById("watch-now-btn").href = type === 'custom' ? `/play/custom/${id}` : `/play/${type}/${id}`;
+            if (IS_LIVE_MODE) {
+                const watchBtn = document.getElementById("watch-now-btn");
+                if (watchBtn) {
+                    watchBtn.href = type === 'custom' ? `/play/custom/${id}` : `/play/${type}/${id}`;
+                }
+            }
 
             // Genres
             document.getElementById("genres-row").innerHTML = (details.genres || []).map(g => `
@@ -584,16 +599,17 @@
                 const playUrl = type === 'custom'
                     ? `/play/custom/${id}?season=${seasonNum}&episode=${e.episode_number}`
                     : `/play/tv/${id}?season=${seasonNum}&episode=${e.episode_number}`;
-                return `
-                <div class="glass p-4 rounded-2xl flex flex-col sm:flex-row gap-4 hover:border-violet-500/20 transition-all duration-200">
-                    <div class="w-full sm:w-[130px] aspect-video rounded-xl overflow-hidden bg-[#1E1E2E] border border-white/5 flex-shrink-0 relative">
-                        <img src="${e.still_path ? 'https://image.tmdb.org/t/p/w300' + e.still_path : 'https://placehold.co/300x169/1E1E2E/FFF?text=Episode+' + e.episode_number}" class="w-full h-full object-cover">
-                        <!-- Play Icon overlay -->
+                const playOverlay = IS_LIVE_MODE ? `
                         <a href="${playUrl}" class="absolute inset-0 flex items-center justify-center bg-slate-950/30 hover:bg-slate-950/60 transition group">
                             <span class="w-8 h-8 rounded-full bg-violet-600 flex items-center justify-center text-white shadow-lg shadow-violet-500/20 group-hover:scale-110 transition">
                                 <svg class="w-4 h-4 fill-current ml-0.5" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
                             </span>
-                        </a>
+                        </a>` : '';
+                return `
+                <div class="glass p-4 rounded-2xl flex flex-col sm:flex-row gap-4 hover:border-violet-500/20 transition-all duration-200">
+                    <div class="w-full sm:w-[130px] aspect-video rounded-xl overflow-hidden bg-[#1E1E2E] border border-white/5 flex-shrink-0 relative">
+                        <img src="${e.still_path ? 'https://image.tmdb.org/t/p/w300' + e.still_path : 'https://placehold.co/300x169/1E1E2E/FFF?text=Episode+' + e.episode_number}" class="w-full h-full object-cover">
+                        ${playOverlay}
                     </div>
                     <div class="flex-1 space-y-1.5 flex flex-col justify-center leading-tight">
                         <div class="flex justify-between items-start gap-2">

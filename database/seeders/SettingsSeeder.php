@@ -13,6 +13,7 @@ class SettingsSeeder extends Seeder
             'ads_enabled' => ['value' => false, 'type' => 'boolean'],
             'enable_webview_ads' => ['value' => false, 'type' => 'boolean'],
             'webview_ad_url' => ['value' => 'https://nazaarabox.com', 'type' => 'string'],
+            'app_mode' => ['value' => 'live', 'type' => 'string'],
         ];
 
         foreach ($defaults as $key => $meta) {

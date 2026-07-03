@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\TmdbProxyController;
 use App\Http\Controllers\DownloadLinkController;
+use App\Models\Setting;
 
 Route::get('/', function () {
     return view('home');
@@ -33,6 +34,10 @@ Route::get('/actor/{id}', function ($id) {
 })->name('actor');
 
 Route::get('/play/{type}/{id}', function ($type, $id) {
+    if (Setting::isSafeReviewMode()) {
+        return redirect()->route('details', ['type' => $type, 'id' => $id]);
+    }
+
     return view('player', [
         'type'    => $type,
         'id'      => $id,
@@ -68,6 +73,8 @@ Route::prefix('admin/api/settings')->group(function () {
     Route::put('/', [\App\Http\Controllers\SettingsController::class, 'update']);
     Route::post('/enable-all-ads', [\App\Http\Controllers\SettingsController::class, 'enableAllAds']);
     Route::post('/disable-all-ads', [\App\Http\Controllers\SettingsController::class, 'disableAllAds']);
+    Route::post('/set-safe-review', [\App\Http\Controllers\SettingsController::class, 'setSafeReviewMode']);
+    Route::post('/set-live-mode', [\App\Http\Controllers\SettingsController::class, 'setLiveMode']);
 });
 
 // Notification Manager
@@ -84,6 +91,10 @@ Route::get('/details/custom/{id}', function ($id) {
 })->name('details.custom');
 
 Route::get('/play/custom/{id}', function ($id) {
+    if (Setting::isSafeReviewMode()) {
+        return redirect()->route('details.custom', ['id' => $id]);
+    }
+
     return view('player', [
         'type'    => 'custom',
         'id'      => $id,

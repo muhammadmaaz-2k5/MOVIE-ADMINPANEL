@@ -32,6 +32,10 @@ class ConfigController extends Controller
 
     public function servers()
     {
+        if (Setting::isSafeReviewMode()) {
+            return response()->json(['error' => 'Streaming is disabled in Safe Review Mode.'], 403);
+        }
+
         $id = request()->query('id');
         $season = request()->query('season');
         $episode = request()->query('episode');

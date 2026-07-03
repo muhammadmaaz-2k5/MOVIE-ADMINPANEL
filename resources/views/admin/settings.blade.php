@@ -8,15 +8,59 @@
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
             <h1 class="text-2xl font-extrabold text-white tracking-tight">Global Settings</h1>
-            <p class="text-slate-400 text-sm mt-1">Control mobile app ads remotely from production database.</p>
+            <p class="text-slate-400 text-sm mt-1">Control app mode, ads, and mobile features remotely from production database.</p>
         </div>
         <div class="flex flex-wrap gap-2">
+            <button onclick="setSafeReviewMode()" id="btn-safe-mode" class="inline-flex items-center gap-2 bg-sky-600 hover:bg-sky-500 text-white font-bold px-4 py-2.5 rounded-2xl transition shadow-lg shadow-sky-500/20 text-sm">
+                Safe Review Mode
+            </button>
+            <button onclick="setLiveMode()" id="btn-live-mode" class="inline-flex items-center gap-2 bg-violet-600 hover:bg-violet-500 text-white font-bold px-4 py-2.5 rounded-2xl transition shadow-lg shadow-violet-500/20 text-sm">
+                Live Mode
+            </button>
             <button onclick="enableAllAds()" id="btn-enable-all" class="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-4 py-2.5 rounded-2xl transition shadow-lg shadow-emerald-500/20 text-sm">
                 Enable All Ads
             </button>
             <button onclick="disableAllAds()" id="btn-disable-all" class="inline-flex items-center gap-2 bg-rose-600 hover:bg-rose-500 text-white font-bold px-4 py-2.5 rounded-2xl transition shadow-lg shadow-rose-500/20 text-sm">
                 Disable All Ads
             </button>
+        </div>
+    </div>
+
+    <!-- App Mode -->
+    <div class="glass rounded-3xl overflow-hidden divide-y divide-white/5">
+        <div class="p-6 space-y-6">
+            <div class="flex items-center justify-between gap-4">
+                <h3 class="text-lg font-extrabold text-white flex items-center gap-2">
+                    <svg class="w-5 h-5 text-sky-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                    </svg>
+                    App Mode
+                </h3>
+                <span id="app-mode-badge" class="px-3 py-1 rounded-full text-xs font-bold bg-slate-700 text-slate-300">Loading...</span>
+            </div>
+
+            <div class="grid sm:grid-cols-2 gap-4">
+                <label class="relative cursor-pointer group">
+                    <input type="radio" name="app_mode" value="safe_review" id="app_mode_safe_review" class="peer sr-only">
+                    <div class="p-5 rounded-2xl border border-white/5 bg-white/2 peer-checked:border-sky-500/40 peer-checked:bg-sky-500/10 transition h-full">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="text-sm font-bold text-white">Safe Review Mode</span>
+                            <span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-sky-500/20 text-sky-300">Store Safe</span>
+                        </div>
+                        <p class="text-xs text-slate-400 leading-relaxed">Shows movie/TV details only — overview, cast, trailers, reviews. No watch or download features.</p>
+                    </div>
+                </label>
+                <label class="relative cursor-pointer group">
+                    <input type="radio" name="app_mode" value="live" id="app_mode_live" class="peer sr-only">
+                    <div class="p-5 rounded-2xl border border-white/5 bg-white/2 peer-checked:border-violet-500/40 peer-checked:bg-violet-500/10 transition h-full">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="text-sm font-bold text-white">Live Mode</span>
+                            <span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-violet-500/20 text-violet-300">Full Features</span>
+                        </div>
+                        <p class="text-xs text-slate-400 leading-relaxed">All features enabled — streaming, downloads, episode playback, and server selection.</p>
+                    </div>
+                </label>
+            </div>
         </div>
     </div>
 
@@ -119,9 +163,14 @@ function applySettingsToForm(data) {
     document.getElementById('ads_enabled').checked = !!data.ads_enabled;
     document.getElementById('enable_webview_ads').checked = !!data.enable_webview_ads;
     document.getElementById('webview_ad_url').value = data.webview_ad_url || '';
+    const mode = data.app_mode === 'safe_review' ? 'safe_review' : 'live';
+    document.getElementById('app_mode_safe_review').checked = mode === 'safe_review';
+    document.getElementById('app_mode_live').checked = mode === 'live';
 }
 
 function updateStatusBadge(data) {
+    updateAppModeBadge(data);
+
     const badge = document.getElementById('ads-status-badge');
     if (data.ads_enabled && data.enable_webview_ads) {
         badge.textContent = 'All Ads ON';
@@ -132,6 +181,17 @@ function updateStatusBadge(data) {
     } else {
         badge.textContent = 'All Ads OFF';
         badge.className = 'px-3 py-1 rounded-full text-xs font-bold bg-slate-700 text-slate-300';
+    }
+}
+
+function updateAppModeBadge(data) {
+    const badge = document.getElementById('app-mode-badge');
+    if (data.app_mode === 'safe_review') {
+        badge.textContent = 'Safe Review';
+        badge.className = 'px-3 py-1 rounded-full text-xs font-bold bg-sky-500/20 text-sky-400 border border-sky-500/30';
+    } else {
+        badge.textContent = 'Live Mode';
+        badge.className = 'px-3 py-1 rounded-full text-xs font-bold bg-violet-500/20 text-violet-400 border border-violet-500/30';
     }
 }
 
@@ -150,6 +210,7 @@ async function saveSettings(e) {
             ads_enabled: document.getElementById('ads_enabled').checked,
             enable_webview_ads: document.getElementById('enable_webview_ads').checked,
             webview_ad_url: document.getElementById('webview_ad_url').value.trim(),
+            app_mode: document.getElementById('app_mode_safe_review').checked ? 'safe_review' : 'live',
         };
 
         const res = await fetch(API_BASE, {
@@ -178,6 +239,14 @@ async function saveSettings(e) {
         btn.disabled = false;
         btn.textContent = 'Save Settings';
     }
+}
+
+async function setSafeReviewMode() {
+    await bulkToggle('/set-safe-review', 'Safe Review Mode enabled');
+}
+
+async function setLiveMode() {
+    await bulkToggle('/set-live-mode', 'Live Mode enabled');
 }
 
 async function enableAllAds() {
