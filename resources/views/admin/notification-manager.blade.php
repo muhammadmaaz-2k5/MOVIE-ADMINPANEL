@@ -69,29 +69,33 @@
                         <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
                             <div>
                                 <label class="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-2">Target Screen</label>
-                                <select id="notif-screen" class="w-full bg-[#1E1E2E] border border-white/5 text-slate-300 text-sm rounded-xl px-4 py-3 focus:outline-none focus:border-violet-500/40 transition">
-                                    <option value="">None (Default)</option>
-                                    <option value="home">Home Screen</option>
-                                    <option value="search">Search Screen</option>
-                                    <option value="watch">Watch / Player Screen</option>
+                                <select id="notif-screen" onchange="onDirectScreenChange()" class="w-full bg-[#1E1E2E] border border-white/5 text-slate-300 text-sm rounded-xl px-4 py-3 focus:outline-none focus:border-violet-500/40 transition">
+                                    <option value="">None (Default / Home)</option>
+                                    <option value="watch">🎬 Watch Details Screen</option>
+                                    <option value="movies">🎥 Movies Tab</option>
+                                    <option value="tv_shows">📺 TV Shows Tab</option>
+                                    <option value="anime">🌸 Anime Tab</option>
+                                    <option value="search">🔍 Search Screen</option>
+                                    <option value="actor">👤 Actor Profile Screen</option>
+                                    <option value="privacy_policy">📄 Privacy Policy</option>
                                 </select>
                             </div>
 
-                            <div>
+                            <div id="direct-item-type-wrapper" class="hidden">
                                 <label class="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-2">Content Type</label>
                                 <select id="notif-item-type" class="w-full bg-[#1E1E2E] border border-white/5 text-slate-300 text-sm rounded-xl px-4 py-3 focus:outline-none focus:border-violet-500/40 transition">
-                                    <option value="movie">🎬 Movie</option>
+                                    <option value="movie">🎥 Movie</option>
                                     <option value="tv">📺 TV Show</option>
                                 </select>
                             </div>
 
-                            <div>
-                                <label class="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-2">Drama ID / Slug</label>
-                                <input id="notif-slug" type="text" placeholder="e.g. 693134 or 1" class="w-full bg-[#1E1E2E] border border-white/5 text-white text-sm rounded-xl px-4 py-3 placeholder-slate-500 focus:outline-none focus:border-violet-500/40 transition"/>
+                            <div id="direct-slug-wrapper" class="hidden">
+                                <label id="direct-slug-label" class="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-2">Drama ID / Slug</label>
+                                <input id="notif-slug" type="text" placeholder="e.g. 693134" class="w-full bg-[#1E1E2E] border border-white/5 text-white text-sm rounded-xl px-4 py-3 placeholder-slate-500 focus:outline-none focus:border-violet-500/40 transition"/>
                             </div>
 
-                            <div>
-                                <label class="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-2">Episode Number</label>
+                            <div id="direct-episode-wrapper" class="hidden">
+                                <label class="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-2">Episode Number (Optional)</label>
                                 <input id="notif-episode" type="text" placeholder="e.g. 1" class="w-full bg-[#1E1E2E] border border-white/5 text-white text-sm rounded-xl px-4 py-3 placeholder-slate-500 focus:outline-none focus:border-violet-500/40 transition"/>
                             </div>
                         </div>
@@ -267,21 +271,25 @@
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div class="space-y-1.5">
                         <label class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Target Screen</label>
-                        <select id="form-screen" class="w-full bg-[#1E1E2E] border border-white/5 text-white text-sm rounded-xl px-4 py-2.5 focus:outline-none focus:border-violet-500/40 transition">
-                            <option value="">None (Default)</option>
-                            <option value="home">Home Screen</option>
-                            <option value="search">Search Screen</option>
-                            <option value="watch">Watch / Player Screen</option>
+                        <select id="form-screen" onchange="onFormScreenChange()" class="w-full bg-[#1E1E2E] border border-white/5 text-white text-sm rounded-xl px-4 py-2.5 focus:outline-none focus:border-violet-500/40 transition">
+                            <option value="">None (Default / Home)</option>
+                            <option value="watch">🎬 Watch Details Screen</option>
+                            <option value="movies">🎥 Movies Tab</option>
+                            <option value="tv_shows">📺 TV Shows Tab</option>
+                            <option value="anime">🌸 Anime Tab</option>
+                            <option value="search">🔍 Search Screen</option>
+                            <option value="actor">👤 Actor Profile Screen</option>
+                            <option value="privacy_policy">📄 Privacy Policy</option>
                         </select>
                     </div>
 
-                    <div class="space-y-1.5">
-                        <label class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Drama Slug / ID</label>
+                    <div id="form-slug-wrapper" class="space-y-1.5 hidden">
+                        <label id="form-slug-label" class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Drama Slug / ID</label>
                         <input id="form-drama-slug" type="text" placeholder="e.g. stranger-things" class="w-full bg-[#1E1E2E] border border-white/5 text-white text-sm rounded-xl px-4 py-2.5 focus:outline-none focus:border-violet-500/40 transition"/>
                     </div>
 
-                    <div class="space-y-1.5">
-                        <label class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Episode Number</label>
+                    <div id="form-episode-wrapper" class="space-y-1.5 hidden">
+                        <label class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Episode Number (Optional)</label>
                         <input id="form-episode-number" type="text" placeholder="e.g. 5" class="w-full bg-[#1E1E2E] border border-white/5 text-white text-sm rounded-xl px-4 py-2.5 focus:outline-none focus:border-violet-500/40 transition"/>
                     </div>
                 </div>
@@ -363,7 +371,11 @@ async function sendDirectNotification(e) {
     formData.append('title', document.getElementById('notif-title').value);
     formData.append('body', document.getElementById('notif-body').value);
     formData.append('screen', document.getElementById('notif-screen').value);
-    formData.append('drama_slug', document.getElementById('notif-slug').value);
+    const slugVal = document.getElementById('notif-slug').value;
+    formData.append('drama_slug', slugVal);
+    if (slugVal && /^\d+$/.test(slugVal)) {
+        formData.append('tmdb_id', slugVal);
+    }
     formData.append('episode_number', document.getElementById('notif-episode').value);
     formData.append('item_type', document.getElementById('notif-item-type').value);
     formData.append('image_type', document.getElementById('notif-image-type').value);
@@ -392,6 +404,7 @@ async function sendDirectNotification(e) {
             showToast(data.message);
             document.getElementById('notification-form').reset();
             toggleDirectImageInput();
+            onDirectScreenChange();
         } else {
             showToast(data.message || 'Unknown error occurred', 'error');
         }
@@ -519,6 +532,7 @@ function openTemplateModal() {
     document.getElementById('tmdb-search-section').classList.remove('hidden');
     document.getElementById('template-modal').classList.remove('hidden');
     toggleImageInput();
+    onFormScreenChange();
     document.body.style.overflow = 'hidden';
 }
 
@@ -537,6 +551,7 @@ function editTemplate(t) {
     document.getElementById('form-episode-number').value = t.episode_number || '';
 
     toggleImageInput();
+    onFormScreenChange();
 
     if (t.image_type === 'tmdb') {
         document.getElementById('form-image-path').value = t.image_path || '';
@@ -775,11 +790,65 @@ function selectTmdbContent(c) {
     
     // Prefill with TMDB ID since the app routes using TMDB ID
     document.getElementById('form-drama-slug').value = c.id;
+    
+    onFormScreenChange();
 
     // Hide search results
     document.getElementById('tmdb-results').classList.add('hidden');
     document.getElementById('tmdb-search').value = '';
 }
+
+function onDirectScreenChange() {
+    const screen = document.getElementById('notif-screen').value;
+    const typeWrapper = document.getElementById('direct-item-type-wrapper');
+    const slugWrapper = document.getElementById('direct-slug-wrapper');
+    const episodeWrapper = document.getElementById('direct-episode-wrapper');
+    const slugLabel = document.getElementById('direct-slug-label');
+
+    if (screen === 'watch') {
+        typeWrapper.classList.remove('hidden');
+        slugWrapper.classList.remove('hidden');
+        episodeWrapper.classList.remove('hidden');
+        slugLabel.innerText = 'Drama ID / Slug';
+        document.getElementById('notif-slug').placeholder = 'e.g. 693134 or stranger-things';
+    } else if (screen === 'actor') {
+        typeWrapper.classList.add('hidden');
+        slugWrapper.classList.remove('hidden');
+        episodeWrapper.classList.add('hidden');
+        slugLabel.innerText = 'Actor TMDB ID';
+        document.getElementById('notif-slug').placeholder = 'e.g. 12345';
+    } else {
+        typeWrapper.classList.add('hidden');
+        slugWrapper.classList.add('hidden');
+        episodeWrapper.classList.add('hidden');
+    }
+}
+
+function onFormScreenChange() {
+    const screen = document.getElementById('form-screen').value;
+    const slugWrapper = document.getElementById('form-slug-wrapper');
+    const episodeWrapper = document.getElementById('form-episode-wrapper');
+    const slugLabel = document.getElementById('form-slug-label');
+
+    if (screen === 'watch') {
+        slugWrapper.classList.remove('hidden');
+        episodeWrapper.classList.remove('hidden');
+        slugLabel.innerText = 'Drama ID / Slug';
+        document.getElementById('form-drama-slug').placeholder = 'e.g. stranger-things or 693134';
+    } else if (screen === 'actor') {
+        slugWrapper.classList.remove('hidden');
+        episodeWrapper.classList.add('hidden');
+        slugLabel.innerText = 'Actor TMDB ID';
+        document.getElementById('form-drama-slug').placeholder = 'e.g. 12345';
+    } else {
+        slugWrapper.classList.add('hidden');
+        episodeWrapper.classList.add('hidden');
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    onDirectScreenChange();
+});
 
 // ── Toast Helper ──────────────────────────────────────────────────────────────
 function showToast(msg, type = 'success') {

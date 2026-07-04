@@ -26,6 +26,7 @@ class NotificationController extends Controller
             'drama_slug' => 'nullable|string',
             'episode_number' => 'nullable|string',
             'item_type' => 'nullable|string|in:movie,tv',
+            'tmdb_id' => 'nullable|string',
         ]);
 
         try {
@@ -53,7 +54,8 @@ class NotificationController extends Controller
                 $request->input('screen'),
                 $request->input('drama_slug'),
                 $request->input('episode_number'),
-                $request->input('item_type')
+                $request->input('item_type'),
+                $request->input('tmdb_id')
             );
             return response()->json(['success' => true, 'message' => 'Notification sent successfully via Firebase FCM.']);
         } catch (\Exception $e) {
@@ -189,7 +191,8 @@ class NotificationController extends Controller
                 $template->screen,
                 $template->drama_slug,
                 $template->episode_number,
-                $template->type
+                $template->type,
+                $template->tmdb_id
             );
             return response()->json(['success' => true, 'message' => "Notification template '{$template->title}' sent successfully."]);
         } catch (\Exception $e) {
@@ -220,7 +223,8 @@ class NotificationController extends Controller
                 $template->screen,
                 $template->drama_slug,
                 $template->episode_number,
-                $template->type
+                $template->type,
+                $template->tmdb_id
             );
             return response()->json(['success' => true, 'message' => "Random {$type} notification '{$template->title}' sent successfully."]);
         } catch (\Exception $e) {
@@ -231,7 +235,7 @@ class NotificationController extends Controller
 
     // ── FCM & Access Token Helpers ────────────────────────────────────────────
 
-    public function sendFCMNotification($title, $body, $imageUrl = null, $screen = null, $dramaSlug = null, $episodeNumber = null, $itemType = null)
+    public function sendFCMNotification($title, $body, $imageUrl = null, $screen = null, $dramaSlug = null, $episodeNumber = null, $itemType = null, $tmdbId = null)
     {
         $path = $this->getFirebaseCredentialsPath();
         if (!file_exists($path)) {
@@ -264,6 +268,7 @@ class NotificationController extends Controller
                     'drama_slug' => (string) ($dramaSlug ?? ''),
                     'episode_number' => (string) ($episodeNumber ?? ''),
                     'item_type' => (string) ($itemType ?? ''),
+                    'tmdb_id' => (string) ($tmdbId ?? ''),
                 ]
             ]
         ];
