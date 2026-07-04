@@ -3,8 +3,10 @@
 @section('title', 'Loading details… — CineMovie')
 
 @section('content')
+@php $isSafeMode = !$isLiveMode; @endphp
 <div class="relative w-full min-h-screen text-slate-100 select-none pb-12" id="details-container">
     
+    @if($isLiveMode)
     <!-- Hero Backdrop Banner -->
     <div class="relative w-full h-[350px] md:h-[550px] overflow-hidden">
         <div id="backdrop-img" class="absolute inset-0 bg-cover bg-center transition-all duration-700 blur-[2px] scale-[1.01]" style="background-image: url('https://placehold.co/1280x720/121220/FFF?text=Loading')"></div>
@@ -16,26 +18,29 @@
             <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" /></svg>
         </button>
     </div>
-
-    <!-- Main Metadata Section (Overlapping) -->
-    <div class="max-w-7xl mx-auto px-4 md:px-8 -mt-36 md:-mt-56 relative z-10 space-y-8">
+    @endif
+    
+    <!-- Main Metadata Section -->
+    <div class="max-w-7xl mx-auto px-4 md:px-8 {{ $isLiveMode ? ($isSafeMode ? '' : '-mt-36 md:-mt-56') : 'pt-8' }} relative z-10 space-y-8">
         
         <!-- Main Panel: Poster + Core Details -->
         <div class="flex flex-col md:flex-row gap-6 md:gap-8 items-start">
+            @if($isLiveMode)
             <!-- Poster -->
             <div class="w-[180px] md:w-[260px] aspect-[2/3] rounded-3xl overflow-hidden shadow-2xl border border-white/5 self-center md:self-start bg-[#121220] flex-shrink-0">
                 <img id="poster-img" src="" alt="Poster" class="w-full h-full object-cover opacity-0 transition-opacity duration-300">
             </div>
-
+            @endif
+            
             <!-- Details Panel -->
-            <div class="flex-1 space-y-4 text-center md:text-left self-end pb-2">
-                <div class="flex flex-wrap gap-2 justify-center md:justify-start items-center">
+            <div class="flex-1 space-y-4 text-center {{ $isLiveMode ? 'md:text-left' : '' }} self-end pb-2">
+                <div class="flex flex-wrap gap-2 justify-center {{ $isLiveMode ? 'md:justify-start' : '' }} items-center">
                     <span id="meta-type" class="px-2.5 py-0.5 text-[10px] font-extrabold uppercase bg-violet-600/30 text-violet-400 border border-violet-500/20 rounded-md">Movie</span>
                     <span id="meta-status" class="px-2.5 py-0.5 text-[10px] font-extrabold uppercase bg-[#00B894]/20 text-[#00B894] border border-[#00B894]/20 rounded-md">Released</span>
                 </div>
                 <h1 id="details-title" class="text-3xl md:text-5xl font-extrabold tracking-tight drop-shadow">Loading Title...</h1>
                 
-                <div class="flex flex-wrap gap-x-4 gap-y-2 justify-center md:justify-start items-center text-slate-300 text-xs font-semibold">
+                <div class="flex flex-wrap gap-x-4 gap-y-2 justify-center {{ $isLiveMode ? 'md:justify-start' : '' }} items-center text-slate-300 text-xs font-semibold">
                     <span id="meta-rating" class="flex items-center gap-1 text-amber-400 font-extrabold">
                         <svg class="w-4 h-4 fill-current" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
                         <span>0.0</span>
@@ -49,10 +54,10 @@
                 </div>
 
                 <!-- Genre Chips -->
-                <div id="genres-row" class="flex flex-wrap gap-2 justify-center md:justify-start py-1"></div>
+                <div id="genres-row" class="flex flex-wrap gap-2 justify-center {{ $isLiveMode ? 'md:justify-start' : '' }} py-1"></div>
 
                 <!-- Main Action Buttons -->
-                <div class="flex flex-wrap gap-3 justify-center md:justify-start pt-3">
+                <div class="flex flex-wrap gap-3 justify-center {{ $isLiveMode ? 'md:justify-start' : '' }} pt-3">
                     @if($isLiveMode)
                     <a id="watch-now-btn" href="" class="inline-flex items-center gap-2 bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white font-extrabold px-8 py-3.5 rounded-2xl hover:from-violet-500 hover:to-fuchsia-500 transition duration-200 shadow-xl shadow-violet-500/20 text-sm">
                         <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
@@ -61,7 +66,7 @@
                     @else
                     <span class="inline-flex items-center gap-2 bg-sky-600/20 border border-sky-500/30 text-sky-300 font-extrabold px-6 py-3.5 rounded-2xl text-sm">
                         <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
-                        <span>Review Mode — Info Only</span>
+                        <span>Safe Review — Info Only</span>
                     </span>
                     @endif
                     
@@ -81,6 +86,7 @@
             </div>
         </div>
 
+        @if($isLiveMode)
         <!-- Custom Tabs Section -->
         <div class="space-y-6">
             <div class="border-b border-[#1E1E2E] flex gap-6 overflow-x-auto no-scrollbar scroll-smooth">
@@ -148,13 +154,24 @@
                 </div>
             </div>
         </div>
+        @else
+        <!-- Safe Mode: Simplified Overview Only -->
+        <div class="space-y-6">
+            <div class="glass p-6 rounded-3xl space-y-4">
+                <h3 class="text-md font-bold text-white">Storyline</h3>
+                <p id="plot-text" class="text-slate-300 text-sm leading-relaxed"></p>
+            </div>
+        </div>
+        @endif
 
     </div>
 </div>
 
-<!-- Download Links Modal — Dynamic from DB -->
-<div id="download-modal" class="fixed inset-0 bg-slate-950/85 backdrop-blur-md z-50 flex items-end sm:items-center justify-center hidden select-none" onclick="closeDownloadModal(event)">
-    <div id="download-modal-panel" class="w-full max-w-lg bg-[#121220] rounded-t-3xl sm:rounded-3xl border border-white/8 shadow-2xl shadow-slate-950/60 overflow-hidden animate-slideUp">
+<!-- Download Links Modal — Only shown in Live Mode -->
+    @if($isLiveMode)
+    <div id="download-modal" class="fixed inset-0 bg-slate-950/85 backdrop-blur-md z-50 flex items-end sm:items-center justify-center hidden select-none" onclick="closeDownloadModal(event)">
+        <div id="download-modal-panel" class="w-full max-w-lg bg-[#121220] rounded-t-3xl sm:rounded-3xl border border-white/8 shadow-2xl shadow-slate-950/60 overflow-hidden animate-slideUp">
+    @endif
         <!-- Header -->
         <div class="px-6 pt-6 pb-4 flex justify-between items-start border-b border-white/5">
             <div>
@@ -179,7 +196,7 @@
         </div>
 
         <!-- Manage / Disclaimer footer -->
-        <div class="px-6 py-3.5 border-t border-white/5 flex items-center justify-between gap-3">
+<div class="px-6 py-3.5 border-t border-white/5 flex items-center justify-between gap-3">
             <p class="text-[10px] text-slate-500 leading-relaxed flex-1">
                 ⚠️ CineMovie does not host copyrighted content. Links are sourced externally.
             </p>
@@ -189,26 +206,28 @@
             </a>
         </div>
     </div>
-</div>
-
-<!-- Season Episodes Modal Drawer -->
-<div id="episodes-drawer" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex justify-end hidden select-none">
-    <div class="w-full max-w-lg bg-[#121220] h-full flex flex-col border-l border-white/5 animate-slideLeft">
-        <!-- Drawer Header -->
-        <div class="px-6 py-5 border-b border-[#1E1E2E] flex justify-between items-center bg-[#1E1E2E]/20">
-            <div>
-                <h3 id="drawer-title" class="text-lg font-extrabold text-white">Season 1</h3>
-                <p id="drawer-subtitle" class="text-slate-400 text-xs mt-0.5">0 Episodes</p>
+    @endif
+    
+    @if($isLiveMode)
+    <!-- Season Episodes Modal Drawer -->
+    <div id="episodes-drawer" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex justify-end hidden select-none">
+        <div class="w-full max-w-lg bg-[#121220] h-full flex flex-col border-l border-white/5 animate-slideLeft">
+            <!-- Drawer Header -->
+            <div class="px-6 py-5 border-b border-[#1E1E2E] flex justify-between items-center bg-[#1E1E2E]/20">
+                <div>
+                    <h3 id="drawer-title" class="text-lg font-extrabold text-white">Season 1</h3>
+                    <p id="drawer-subtitle" class="text-slate-400 text-xs mt-0.5">0 Episodes</p>
+                </div>
+                <button onclick="closeEpisodes()" class="p-2 rounded-xl bg-[#1E1E2E] border border-white/5 hover:bg-white/5 transition">
+                    <svg class="w-5 h-5 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
             </div>
-            <button onclick="closeEpisodes()" class="p-2 rounded-xl bg-[#1E1E2E] border border-white/5 hover:bg-white/5 transition">
-                <svg class="w-5 h-5 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-            </button>
+            
+            <!-- Episode List Scrollable Area -->
+            <div id="episodes-list" class="flex-1 overflow-y-auto px-6 py-4 space-y-4 scrollbar-thin"></div>
         </div>
-        
-        <!-- Episode List Scrollable Area -->
-        <div id="episodes-list" class="flex-1 overflow-y-auto px-6 py-4 space-y-4 scrollbar-thin"></div>
     </div>
-</div>
+    @endif
 
 <script>
     const type = "{{ $type }}";
@@ -451,15 +470,18 @@
 
             // Overview Tab
             document.getElementById("plot-text").innerText = (customMovieData && customMovieData.overview) ? customMovieData.overview : (details.overview || 'No storyline description is currently available for this title.');
-            document.getElementById("stat-budget").innerText = details.budget ? formatCurrency(details.budget) : '$0';
-            document.getElementById("stat-revenue").innerText = details.revenue ? formatCurrency(details.revenue) : '$0';
             
-            const director = (credits.crew || []).find(c => c.job === 'Director');
-            document.getElementById("stat-director").innerText = director ? director.name : 'N/A';
-            document.getElementById("stat-votes").innerText = details.vote_count ? details.vote_count.toLocaleString() : '0';
+            // Statistics - Live Mode Only
+            if (IS_LIVE_MODE) {
+                document.getElementById("stat-budget").innerText = details.budget ? formatCurrency(details.budget) : '$0';
+                document.getElementById("stat-revenue").innerText = details.revenue ? formatCurrency(details.revenue) : '$0';
+                const director = (credits.crew || []).find(c => c.job === 'Director');
+                document.getElementById("stat-director").innerText = director ? director.name : 'N/A';
+                document.getElementById("stat-votes").innerText = details.vote_count ? details.vote_count.toLocaleString() : '0';
+            }
 
-            // Seasons Section (TV Only)
-            if (targetType === 'tv' && details.seasons) {
+            // Seasons Section (TV Only) - Live Mode Only
+            if (IS_LIVE_MODE && targetType === 'tv' && details.seasons) {
                 document.getElementById("seasons-section").classList.remove("hidden");
                 const cleanSeasons = details.seasons.filter(s => s.season_number > 0);
                 document.getElementById("seasons-row").innerHTML = cleanSeasons.map(s => `
@@ -475,92 +497,100 @@
                 `).join('');
             }
 
-            // Cast Tab
-            const castItems = (credits.cast || []).slice(0, 15);
-            const castContainer = document.getElementById("cast-list");
-            if (castItems.length === 0) {
-                castContainer.innerHTML = `<div class="text-slate-500 text-sm py-4">Cast members information not available</div>`;
-            } else {
-                castContainer.innerHTML = castItems.map(c => `
-                    <a href="/actor/${c.id}" class="min-w-[95px] flex flex-col items-center text-center gap-2 group">
-                        <div class="w-16 h-16 rounded-full overflow-hidden border border-white/10 group-hover:border-violet-500 bg-[#1E1E2E] transition">
-                            <img src="${c.profile_path ? 'https://image.tmdb.org/t/p/w185' + c.profile_path : 'https://placehold.co/185x185/1E1E2E/FFF?text=' + encodeURIComponent(c.name.substring(0,2))}" alt="${c.name}" class="w-full h-full object-cover">
-                        </div>
-                        <div class="px-1 flex flex-col leading-tight">
-                            <span class="text-[11px] font-bold text-white truncate max-w-[85px]">${c.name}</span>
-                            <span class="text-[9px] text-slate-400 truncate max-w-[85px] mt-0.5">${c.character}</span>
-                        </div>
-                    </a>
-                `).join('');
-            }
-
-            // Trailers Tab
-            const trailers = (videos.results || []).filter(v => v.site === 'YouTube' && (v.type === 'Trailer' || v.type === 'Teaser')).slice(0, 6);
-            const trailersContainer = document.getElementById("trailers-grid");
-            if (trailers.length === 0) {
-                trailersContainer.innerHTML = `<div class="text-slate-500 text-sm col-span-full py-8 text-center">No official trailers or teasers found</div>`;
-            } else {
-                trailersContainer.innerHTML = trailers.map(v => `
-                    <div class="glass overflow-hidden rounded-2xl border border-white/5 space-y-3 p-3">
-                        <div class="aspect-video relative rounded-xl overflow-hidden">
-                            <iframe class="w-full h-full" src="https://www.youtube.com/embed/${v.key}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
-                        </div>
-                        <h4 class="text-xs font-bold text-white px-1 line-clamp-1">${v.name}</h4>
-                    </div>
-                `).join('');
-            }
-
-            // Reviews Tab
-            const reviewItems = (reviews.results || []).slice(0, 5);
-            const reviewsContainer = document.getElementById("reviews-list");
-            if (reviewItems.length === 0) {
-                reviewsContainer.innerHTML = `<div class="text-slate-500 text-sm py-8 text-center">No reviews have been written for this title</div>`;
-            } else {
-                reviewsContainer.innerHTML = reviewItems.map(r => {
-                    const ratingStr = r.author_details && r.author_details.rating ? `
-                        <span class="flex items-center gap-1 text-amber-500 text-xs font-extrabold bg-amber-500/10 px-2 py-0.5 rounded-lg border border-amber-500/20">
-                            <svg class="w-3 h-3 fill-current" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
-                            ${r.author_details.rating}
-                        </span>
-                    ` : '';
-                    return `
-                        <div class="glass p-5 rounded-2xl space-y-3">
-                            <div class="flex justify-between items-center">
-                                <div class="flex items-center gap-3">
-                                    <div class="w-8 h-8 rounded-full overflow-hidden border border-white/10 bg-[#1E1E2E]">
-                                        <img src="https://placehold.co/32x32/1E1E2E/FFF?text=${r.author.substring(0,1)}" class="w-full h-full object-cover">
-                                    </div>
-                                    <span class="text-xs font-bold text-white">${r.author}</span>
-                                </div>
-                                ${ratingStr}
+            // Cast Tab - Live Mode Only
+            if (IS_LIVE_MODE) {
+                const castItems = (credits.cast || []).slice(0, 15);
+                const castContainer = document.getElementById("cast-list");
+                if (castItems.length === 0) {
+                    castContainer.innerHTML = '<div class="text-slate-500 text-sm py-4">Cast members information not available</div>';
+                } else {
+                    castContainer.innerHTML = castItems.map(c => `
+                        <a href="/actor/${c.id}" class="min-w-[95px] flex flex-col items-center text-center gap-2 group">
+                            <div class="w-16 h-16 rounded-full overflow-hidden border border-white/10 group-hover:border-violet-500 bg-[#1E1E2E] transition">
+                                <img src="${c.profile_path ? 'https://image.tmdb.org/t/p/w185' + c.profile_path : 'https://placehold.co/185x185/1E1E2E/FFF?text=' + encodeURIComponent(c.name.substring(0,2))}" alt="${c.name}" class="w-full h-full object-cover">
                             </div>
-                            <p class="text-slate-300 text-xs leading-relaxed line-clamp-3 hover:line-clamp-none transition-all cursor-pointer">${r.content}</p>
-                        </div>
-                    `;
-                }).join('');
-            }
-
-            // Similar Tab
-            const similarItems = (similar.results || []).slice(0, 10);
-            const similarContainer = document.getElementById("similar-grid");
-            if (similarItems.length === 0) {
-                similarContainer.innerHTML = `<div class="text-slate-500 text-sm col-span-full py-8 text-center">No recommendation matches found</div>`;
-            } else {
-                similarContainer.innerHTML = similarItems.map(s => {
-                    const sReleaseDate = s.release_date || s.first_air_date || '';
-                    const sYear = sReleaseDate ? sReleaseDate.substring(0, 4) : '';
-                    return `
-                        <a href="/details/${type}/${s.id}" class="group flex flex-col gap-2 relative">
-                            <div class="relative aspect-[2/3] rounded-2xl overflow-hidden bg-[#1E1E2E] border border-white/5 transition duration-300 group-hover:scale-[1.03] group-hover:shadow-xl">
-                                <img src="${s.poster_path ? 'https://image.tmdb.org/t/p/w342' + s.poster_path : 'https://placehold.co/342x513/1E1E2E/FFF?text=No+Image'}" alt="${s.title || s.name}" class="w-full h-full object-cover">
-                            </div>
-                            <div class="px-1">
-                                <h4 class="text-xs font-bold text-white group-hover:text-violet-400 transition truncate">${s.title || s.name}</h4>
-                                <span class="text-[10px] text-slate-400 font-semibold">${sYear}</span>
+                            <div class="px-1 flex flex-col leading-tight">
+                                <span class="text-[11px] font-bold text-white truncate max-w-[85px]">${c.name}</span>
+                                <span class="text-[9px] text-slate-400 truncate max-w-[85px] mt-0.5">${c.character}</span>
                             </div>
                         </a>
-                    `;
-                }).join('');
+                    `).join('');
+                }
+            }
+
+            // Trailers Tab - Live Mode Only
+            if (IS_LIVE_MODE) {
+                const trailers = (videos.results || []).filter(v => v.site === 'YouTube' && (v.type === 'Trailer' || v.type === 'Teaser')).slice(0, 6);
+                const trailersContainer = document.getElementById("trailers-grid");
+                if (trailers.length === 0) {
+                    trailersContainer.innerHTML = '<div class="text-slate-500 text-sm col-span-full py-8 text-center">No official trailers or teasers found</div>';
+                } else {
+                    trailersContainer.innerHTML = trailers.map(v => `
+                        <div class="glass overflow-hidden rounded-2xl border border-white/5 space-y-3 p-3">
+                            <div class="aspect-video relative rounded-xl overflow-hidden">
+                                <iframe class="w-full h-full" src="https://www.youtube.com/embed/${v.key}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                            </div>
+                            <h4 class="text-xs font-bold text-white px-1 line-clamp-1">${v.name}</h4>
+                        </div>
+                    `).join('');
+                }
+            }
+
+            // Reviews Tab - Live Mode Only
+            if (IS_LIVE_MODE) {
+                const reviewItems = (reviews.results || []).slice(0, 5);
+                const reviewsContainer = document.getElementById("reviews-list");
+                if (reviewItems.length === 0) {
+                    reviewsContainer.innerHTML = '<div class="text-slate-500 text-sm py-8 text-center">No reviews have been written for this title</div>';
+                } else {
+                    reviewsContainer.innerHTML = reviewItems.map(r => {
+                        const ratingStr = r.author_details && r.author_details.rating ? `
+                            <span class="flex items-center gap-1 text-amber-500 text-xs font-extrabold bg-amber-500/10 px-2 py-0.5 rounded-lg border border-amber-500/20">
+                                <svg class="w-3 h-3 fill-current" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
+                                ${r.author_details.rating}
+                            </span>
+                        ` : '';
+                        return `
+                            <div class="glass p-5 rounded-2xl space-y-3">
+                                <div class="flex justify-between items-center">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-8 h-8 rounded-full overflow-hidden border border-white/10 bg-[#1E1E2E]">
+                                            <img src="https://placehold.co/32x32/1E1E2E/FFF?text=${r.author.substring(0,1)}" class="w-full h-full object-cover">
+                                        </div>
+                                        <span class="text-xs font-bold text-white">${r.author}</span>
+                                    </div>
+                                    ${ratingStr}
+                                </div>
+                                <p class="text-slate-300 text-xs leading-relaxed line-clamp-3 hover:line-clamp-none transition-all cursor-pointer">${r.content}</p>
+                            </div>
+                        `;
+                    }).join('');
+                }
+            }
+
+            // Similar Tab - Live Mode Only
+            if (IS_LIVE_MODE) {
+                const similarItems = (similar.results || []).slice(0, 10);
+                const similarContainer = document.getElementById("similar-grid");
+                if (similarItems.length === 0) {
+                    similarContainer.innerHTML = '<div class="text-slate-500 text-sm col-span-full py-8 text-center">No recommendation matches found</div>';
+                } else {
+                    similarContainer.innerHTML = similarItems.map(s => {
+                        const sReleaseDate = s.release_date || s.first_air_date || '';
+                        const sYear = sReleaseDate ? sReleaseDate.substring(0, 4) : '';
+                        return `
+                            <a href="/details/${type}/${s.id}" class="group flex flex-col gap-2 relative">
+                                <div class="relative aspect-[2/3] rounded-2xl overflow-hidden bg-[#1E1E2E] border border-white/5 transition duration-300 group-hover:scale-[1.03] group-hover:shadow-xl">
+                                    <img src="${s.poster_path ? 'https://image.tmdb.org/t/p/w342' + s.poster_path : 'https://placehold.co/342x513/1E1E2E/FFF?text=No+Image'}" alt="${s.title || s.name}" class="w-full h-full object-cover">
+                                </div>
+                                <div class="px-1">
+                                    <h4 class="text-xs font-bold text-white group-hover:text-violet-400 transition truncate">${s.title || s.name}</h4>
+                                    <span class="text-[10px] text-slate-400 font-semibold">${sYear}</span>
+                                </div>
+                            </a>
+                        `;
+                    }).join('');
+                }
             }
 
         } catch (err) {

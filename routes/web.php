@@ -81,6 +81,16 @@ Route::prefix('admin/api/settings')->group(function () {
 Route::get('/admin/notification-manager', [\App\Http\Controllers\NotificationController::class, 'managerView'])->name('admin.notification-manager');
 Route::post('/admin/api/notifications/send', [\App\Http\Controllers\NotificationController::class, 'send']);
 
+// Separated Templates System Routes
+Route::prefix('admin/api/scheduled-notifications')->group(function () {
+    Route::get('/', [\App\Http\Controllers\NotificationController::class, 'index']);
+    Route::post('/', [\App\Http\Controllers\NotificationController::class, 'store']);
+    Route::post('/send-random', [\App\Http\Controllers\NotificationController::class, 'sendRandom']);
+    Route::post('/{id}', [\App\Http\Controllers\NotificationController::class, 'update']);
+    Route::delete('/{id}', [\App\Http\Controllers\NotificationController::class, 'destroy']);
+    Route::post('/{id}/send', [\App\Http\Controllers\NotificationController::class, 'sendSpecific']);
+});
+
 // Custom Movies Public API
 Route::get('/api/custom-content', [\App\Http\Controllers\CustomMovieController::class, 'publicIndex']);
 Route::get('/api/search/custom', [\App\Http\Controllers\CustomMovieController::class, 'search']);
