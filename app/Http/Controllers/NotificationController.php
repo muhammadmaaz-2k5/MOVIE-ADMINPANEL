@@ -45,12 +45,6 @@ class NotificationController extends Controller
                 \App\Models\Setting::setValue('last_direct_broadcast_image', $imageUrl);
             }
 
-            // Convert relative image path to TMDB URL or absolute URL
-            if ($imageUrl && !str_starts_with($imageUrl, 'http') && !str_starts_with($imageUrl, '/uploads/')) {
-                if (str_starts_with($imageUrl, '/')) {
-                    $imageUrl = 'https://image.tmdb.org/t/p/w780' . $imageUrl;
-                }
-            }
 
             $this->sendFCMNotification(
                 $request->input('title'),
@@ -252,7 +246,11 @@ class NotificationController extends Controller
         $finalImageUrl = $imageUrl;
         if ($imageUrl && !str_starts_with($imageUrl, 'http')) {
             $trimmed = ltrim($imageUrl, '/');
-            $finalImageUrl = url($trimmed);
+            if (str_starts_with($trimmed, 'uploads/')) {
+                $finalImageUrl = url($trimmed);
+            } else {
+                $finalImageUrl = 'https://image.tmdb.org/t/p/w780/' . $trimmed;
+            }
         }
 
         $payload = [
