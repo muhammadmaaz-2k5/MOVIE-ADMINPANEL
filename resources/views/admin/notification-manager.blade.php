@@ -725,6 +725,8 @@ async function sendRandomNotification(type, button) {
 }
 
 // ── TMDB Inline Search & Prefill ──────────────────────────────────────────────
+let tmdbSearchResults = [];
+
 function searchTmdb() {
     clearTimeout(tmdbSearchTimer);
     const q = document.getElementById('tmdb-search').value.trim();
@@ -740,16 +742,16 @@ function searchTmdb() {
             // Search movies or TV shows depending on selected type
             const endpoint = `/api/tmdb/search/${type}?query=${encodeURIComponent(q)}`;
             const data = await fetch(endpoint).then(r => r.json());
-            const results = (data.results || []).slice(0, 6);
+            tmdbSearchResults = (data.results || []).slice(0, 6);
             const container = document.getElementById('tmdb-results');
 
-            if (results.length === 0) {
+            if (tmdbSearchResults.length === 0) {
                 container.classList.add('hidden');
                 return;
             }
 
             container.classList.remove('hidden');
-            container.innerHTML = results.map(r => {
+            container.innerHTML = tmdbSearchResults.map((r, index) => {
                 const title = r.title || r.name;
                 const year = (r.release_date || r.first_air_date || '').substring(0,4);
                 const poster = r.poster_path 
@@ -757,7 +759,7 @@ function searchTmdb() {
                     : `https://placehold.co/46x69/1E1E2E/FFF?text=${encodeURIComponent(title.substring(0,2))}`;
                 const typeIcon = type === 'movie' ? '🎬' : '📺';
                 
-                return `<button type="button" onclick='selectTmdbContent(${JSON.stringify({id:r.id,title:title,poster:r.poster_path||"",backdrop:r.backdrop_path||"",overview:r.overview||""}).replace(/'/g,"\\'")})'
+                return `<button type="button" onclick="selectTmdbContentAtIndex(${index})"
                     class="flex items-center gap-3 w-full p-2 rounded-xl hover:bg-white/5 text-left border border-white/0 hover:border-violet-500/20 transition">
                     <img src="${poster}" class="w-8 h-11 rounded-lg object-cover bg-[#1E1E2E] flex-shrink-0"/>
                     <div class="min-w-0 flex-1">
@@ -772,9 +774,12 @@ function searchTmdb() {
     }, 350);
 }
 
-function selectTmdbContent(c) {
+function selectTmdbContentAtIndex(index) {
+    const c = tmdbSearchResults[index];
+    if (!c) return;
+
     document.getElementById('form-tmdb-id').value = c.id;
-    document.getElementById('form-title').value = c.title;
+    document.getElementById('form-title').value = c.title || c.name || '';
     document.getElementById('form-body').value = c.overview || '';
     
     // Choose TMDB image type and prefill path
@@ -782,7 +787,7 @@ function selectTmdbContent(c) {
     toggleImageInput();
 
     // Use backdrop if available, otherwise poster
-    const imgPath = c.backdrop || c.poster || '';
+    const imgPath = c.backdrop_path || c.poster_path || '';
     document.getElementById('form-image-path').value = imgPath;
 
     // Prefill linking details
