@@ -33,7 +33,8 @@ class SendRandomDramaNotification extends Command
                 $notification->image_path,
                 $notification->screen,
                 $notification->drama_slug,
-                $notification->episode_number
+                $notification->episode_number,
+                $notification->type
             );
             $this->info("Successfully sent notification: '{$notification->title}'");
             Log::info("Command SendRandomDramaNotification: Sent template ID {$notification->id} successfully.");

@@ -48,7 +48,7 @@
                     <div class="border-t border-white/5 pt-4 mt-4">
                         <h3 class="text-sm font-semibold text-white mb-4">Deep Link Routing (Optional)</h3>
                         
-                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
                             <div>
                                 <label class="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-2">Target Screen</label>
                                 <select id="notif-screen" class="w-full bg-[#1E1E2E] border border-white/5 text-slate-300 text-sm rounded-xl px-4 py-3 focus:outline-none focus:border-violet-500/40 transition">
@@ -60,8 +60,16 @@
                             </div>
 
                             <div>
-                                <label class="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-2">Drama Slug / ID</label>
-                                <input id="notif-slug" type="text" placeholder="e.g. squid-game" class="w-full bg-[#1E1E2E] border border-white/5 text-white text-sm rounded-xl px-4 py-3 placeholder-slate-500 focus:outline-none focus:border-violet-500/40 transition"/>
+                                <label class="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-2">Content Type</label>
+                                <select id="notif-item-type" class="w-full bg-[#1E1E2E] border border-white/5 text-slate-300 text-sm rounded-xl px-4 py-3 focus:outline-none focus:border-violet-500/40 transition">
+                                    <option value="movie">🎬 Movie</option>
+                                    <option value="tv">📺 TV Show</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label class="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-2">Drama ID / Slug</label>
+                                <input id="notif-slug" type="text" placeholder="e.g. 693134 or 1" class="w-full bg-[#1E1E2E] border border-white/5 text-white text-sm rounded-xl px-4 py-3 placeholder-slate-500 focus:outline-none focus:border-violet-500/40 transition"/>
                             </div>
 
                             <div>
@@ -340,6 +348,7 @@ async function sendDirectNotification(e) {
         screen: document.getElementById('notif-screen').value,
         drama_slug: document.getElementById('notif-slug').value,
         episode_number: document.getElementById('notif-episode').value,
+        item_type: document.getElementById('notif-item-type').value,
         _token: '{{ csrf_token() }}'
     };
 
@@ -722,11 +731,8 @@ function selectTmdbContent(c) {
     // Prefill linking details
     document.getElementById('form-screen').value = 'watch';
     
-    // Convert title to a slug format as suggestion
-    const suggestedSlug = c.title.toLowerCase()
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/(^-|-$)/g, '');
-    document.getElementById('form-drama-slug').value = suggestedSlug;
+    // Prefill with TMDB ID since the app routes using TMDB ID
+    document.getElementById('form-drama-slug').value = c.id;
 
     // Hide search results
     document.getElementById('tmdb-results').classList.add('hidden');

@@ -23,6 +23,7 @@ class NotificationController extends Controller
             'screen' => 'nullable|string',
             'drama_slug' => 'nullable|string',
             'episode_number' => 'nullable|string',
+            'item_type' => 'nullable|string|in:movie,tv',
         ]);
 
         try {
@@ -32,7 +33,8 @@ class NotificationController extends Controller
                 $request->input('image_url'),
                 $request->input('screen'),
                 $request->input('drama_slug'),
-                $request->input('episode_number')
+                $request->input('episode_number'),
+                $request->input('item_type')
             );
             return response()->json(['success' => true, 'message' => 'Notification sent successfully via Firebase FCM.']);
         } catch (\Exception $e) {
@@ -167,7 +169,8 @@ class NotificationController extends Controller
                 $template->image_path,
                 $template->screen,
                 $template->drama_slug,
-                $template->episode_number
+                $template->episode_number,
+                $template->type
             );
             return response()->json(['success' => true, 'message' => "Notification template '{$template->title}' sent successfully."]);
         } catch (\Exception $e) {
@@ -197,7 +200,8 @@ class NotificationController extends Controller
                 $template->image_path,
                 $template->screen,
                 $template->drama_slug,
-                $template->episode_number
+                $template->episode_number,
+                $template->type
             );
             return response()->json(['success' => true, 'message' => "Random {$type} notification '{$template->title}' sent successfully."]);
         } catch (\Exception $e) {
@@ -208,9 +212,9 @@ class NotificationController extends Controller
 
     // ── FCM & Access Token Helpers ────────────────────────────────────────────
 
-    public function sendFCMNotification($title, $body, $imageUrl = null, $screen = null, $dramaSlug = null, $episodeNumber = null)
+    public function sendFCMNotification($title, $body, $imageUrl = null, $screen = null, $dramaSlug = null, $episodeNumber = null, $itemType = null)
     {
-        $path = base_path('../firebase-service-account.json');
+        $path = $this->getFirebaseCredentialsPath();
         if (!file_exists($path)) {
             throw new \Exception("Firebase service account file not found at $path.");
         }
@@ -236,6 +240,7 @@ class NotificationController extends Controller
                     'screen' => (string) ($screen ?? ''),
                     'drama_slug' => (string) ($dramaSlug ?? ''),
                     'episode_number' => (string) ($episodeNumber ?? ''),
+                    'item_type' => (string) ($itemType ?? ''),
                 ]
             ]
         ];
@@ -252,7 +257,7 @@ class NotificationController extends Controller
 
     private function getAccessToken()
     {
-        $path = base_path('../firebase-service-account.json');
+        $path = $this->getFirebaseCredentialsPath();
         if (!file_exists($path)) {
             throw new \Exception("Firebase service account file not found at $path.");
         }
@@ -289,6 +294,33 @@ class NotificationController extends Controller
         }
 
         throw new \Exception("Failed to obtain access token: " . $response->body());
+    }
+
+    private function getFirebaseCredentialsPath()
+    {
+        $configuredPath = env('FIREBASE_CREDENTIALS_PATH');
+        if ($configuredPath) {
+            if (str_starts_with($configuredPath, '/') || str_contains($configuredPath, ':')) {
+                $path = $configuredPath;
+            } else {
+                $path = base_path($configuredPath);
+            }
+            if (file_exists($path)) {
+                return $path;
+            }
+        }
+
+        $fallback1 = base_path('firebase-service-account.json');
+        if (file_exists($fallback1)) {
+            return $fallback1;
+        }
+
+        $fallback2 = base_path('../firebase-service-account.json');
+        if (file_exists($fallback2)) {
+            return $fallback2;
+        }
+
+        return $fallback1;
     }
 
     private function convertAndStoreWebp($file, $oldPath = null)
