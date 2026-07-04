@@ -107,32 +107,34 @@
           fetchServers();
           initIframeListener();
       });
-        try {
-            if (type === 'custom' || id >= 1000000000) {
-                const dbId = id >= 1000000000 ? id - 1000000000 : id;
-                customMovieData = await fetch(`/api/custom-movie/${dbId}`).then(r => r.json());
-                targetType = customMovieData.type;
-                targetTmdbId = customMovieData.tmdb_id;
-                
-                // Set initial season/episode if TV
-                if (targetType === 'tv') {
-                    if (!activeSeason) activeSeason = 1;
-                    if (!activeEpisode) activeEpisode = 1;
-                }
-                
-                // Get custom stream servers
-                resolveCustomStreams();
-            } else {
-                const res = await fetch('/api/config/servers');
-                servers = await res.json();
-            }
 
-            renderServersList();
-            await loadMetadata();
-        } catch (err) {
-            console.error("Error loading dynamic servers configuration:", err);
-        }
-    }
+      async function fetchServers() {
+          try {
+              if (type === 'custom' || id >= 1000000000) {
+                  const dbId = id >= 1000000000 ? id - 1000000000 : id;
+                  customMovieData = await fetch(`/api/custom-movie/${dbId}`).then(r => r.json());
+                  targetType = customMovieData.type;
+                  targetTmdbId = customMovieData.tmdb_id;
+                  
+                  // Set initial season/episode if TV
+                  if (targetType === 'tv') {
+                      if (!activeSeason) activeSeason = 1;
+                      if (!activeEpisode) activeEpisode = 1;
+                  }
+                  
+                  // Get custom stream servers
+                  resolveCustomStreams();
+              } else {
+                  const res = await fetch(`/api/config/servers?id=${id}&season=${activeSeason || ''}&episode=${activeEpisode || ''}`);
+                  servers = await res.json();
+              }
+
+              renderServersList();
+              await loadMetadata();
+          } catch (err) {
+              console.error("Error loading dynamic servers configuration:", err);
+          }
+      }
 
     function resolveCustomStreams() {
         if (!customMovieData) return;

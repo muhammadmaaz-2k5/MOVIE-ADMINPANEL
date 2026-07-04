@@ -112,6 +112,13 @@
                     </svg>
                     <span>Home Sections</span>
                 </a>
+                <a href="{{ route('admin.video-servers') }}" 
+                   class="flex items-center gap-3 px-4 py-3 rounded-xl text-[14px] font-semibold transition-all duration-200 {{ request()->routeIs('admin.video-servers') ? 'bg-violet-600/20 text-violet-400 border border-violet-500/20' : 'text-slate-400 hover:text-slate-200 hover:bg-[#1E1E2E]/50' }}">
+                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14M5 12a2 2 0 012-2h10a2 2 0 012 2m-14 0a2 2 0 002 2h10a2 2 0 002-2M12 5v14" />
+                    </svg>
+                    <span>Video Servers</span>
+                </a>
                 <a href="{{ route('admin.settings') }}" 
                    class="flex items-center gap-3 px-4 py-3 rounded-xl text-[14px] font-semibold transition-all duration-200 {{ request()->routeIs('admin.settings') ? 'bg-violet-600/20 text-violet-400 border border-violet-500/20' : 'text-slate-400 hover:text-slate-200 hover:bg-[#1E1E2E]/50' }}">
                     <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">

@@ -113,6 +113,15 @@ Route::get('/play/custom/{id}', function ($id) {
     ]);
 })->name('play.custom');
 
+// Video Server Admin Management
+Route::get('/admin/video-servers', function () { return view('admin.video-servers'); })->name('admin.video-servers');
+Route::prefix('admin/api/video-servers')->group(function () {
+    Route::get('/', [\App\Http\Controllers\VideoServerController::class, 'index']);
+    Route::post('/', [\App\Http\Controllers\VideoServerController::class, 'store']);
+    Route::put('/{id}', [\App\Http\Controllers\VideoServerController::class, 'update']);
+    Route::delete('/{id}', [\App\Http\Controllers\VideoServerController::class, 'destroy']);
+});
+
 // Custom Movies Admin Management
 Route::get('/admin/movie-manager', [\App\Http\Controllers\CustomMovieController::class, 'managerView'])->name('admin.movie-manager');
 Route::get('/admin/tv-manager', [\App\Http\Controllers\CustomMovieController::class, 'tvManagerView'])->name('admin.tv-manager');
