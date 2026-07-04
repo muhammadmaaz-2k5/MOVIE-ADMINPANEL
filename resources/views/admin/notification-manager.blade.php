@@ -739,11 +739,41 @@ function searchTmdb() {
 
     tmdbSearchTimer = setTimeout(async () => {
         try {
-            // Search movies or TV shows depending on selected type
+            const container = document.getElementById('tmdb-results');
+
+            // If the query is a numeric TMDB ID, perform a direct lookup
+            if (/^\d+$/.test(q)) {
+                const endpoint = `/api/tmdb/${type}/${q}`;
+                const res = await fetch(endpoint);
+                if (res.ok) {
+                    const item = await res.json();
+                    if (item && (item.title || item.name)) {
+                        tmdbSearchResults = [item];
+                        const title = item.title || item.name;
+                        const year = (item.release_date || item.first_air_date || '').substring(0,4);
+                        const poster = item.poster_path 
+                            ? `https://image.tmdb.org/t/p/w92${item.poster_path}` 
+                            : `https://placehold.co/46x69/1E1E2E/FFF?text=${encodeURIComponent(title.substring(0,2))}`;
+                        const typeIcon = type === 'movie' ? '🎬' : '📺';
+
+                        container.classList.remove('hidden');
+                        container.innerHTML = `<button type="button" onclick="selectTmdbContentAtIndex(0)"
+                            class="flex items-center gap-3 w-full p-2 rounded-xl hover:bg-white/5 text-left border border-white/0 hover:border-violet-500/20 transition">
+                            <img src="${poster}" class="w-8 h-11 rounded-lg object-cover bg-[#1E1E2E] flex-shrink-0"/>
+                            <div class="min-w-0 flex-1">
+                                <p class="text-xs font-bold text-white truncate">${typeIcon} ${title} (Exact ID)</p>
+                                <p class="text-[10px] text-slate-400">${year} · ID ${item.id}</p>
+                            </div>
+                        </button>`;
+                        return;
+                    }
+                }
+            }
+
+            // Fallback to title search if the query is not numeric or ID fetch failed
             const endpoint = `/api/tmdb/search/${type}?query=${encodeURIComponent(q)}`;
             const data = await fetch(endpoint).then(r => r.json());
             tmdbSearchResults = (data.results || []).slice(0, 6);
-            const container = document.getElementById('tmdb-results');
 
             if (tmdbSearchResults.length === 0) {
                 container.classList.add('hidden');
