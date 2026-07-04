@@ -40,9 +40,27 @@
                         <textarea id="notif-body" required rows="3" placeholder="e.g. Watch the latest episode of your favorite K-Drama now." class="w-full bg-[#1E1E2E] border border-white/5 text-white text-sm rounded-xl px-4 py-3 placeholder-slate-500 focus:outline-none focus:border-violet-500/40 transition"></textarea>
                     </div>
 
-                    <div>
-                        <label class="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-2">Image URL (Optional)</label>
-                        <input id="notif-image" type="url" placeholder="https://example.com/image.jpg" class="w-full bg-[#1E1E2E] border border-white/5 text-white text-sm rounded-xl px-4 py-3 placeholder-slate-500 focus:outline-none focus:border-violet-500/40 transition"/>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <!-- Image Type -->
+                        <div class="space-y-1.5">
+                            <label class="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-2">Image Type</label>
+                            <select id="notif-image-type" onchange="toggleDirectImageInput()" class="w-full bg-[#1E1E2E] border border-white/5 text-slate-300 text-sm rounded-xl px-4 py-3 focus:outline-none focus:border-violet-500/40 transition">
+                                <option value="url">🔗 Image URL / TMDB Path</option>
+                                <option value="manual">📁 Manual Upload (Auto WebP)</option>
+                            </select>
+                        </div>
+
+                        <!-- Image URL / TMDB Path Input -->
+                        <div id="direct-image-path-wrapper" class="space-y-1.5 sm:col-span-2">
+                            <label class="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-2">Image URL or TMDB Path</label>
+                            <input id="notif-image" type="text" placeholder="https://example.com/image.jpg or /backdrop.jpg" class="w-full bg-[#1E1E2E] border border-white/5 text-white text-sm rounded-xl px-4 py-3 placeholder-slate-500 focus:outline-none focus:border-violet-500/40 transition"/>
+                        </div>
+
+                        <!-- Manual Upload File Input -->
+                        <div id="direct-image-file-wrapper" class="space-y-1.5 sm:col-span-2 hidden">
+                            <label class="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-2">Upload Local Image</label>
+                            <input id="notif-image-file" type="file" accept="image/*" class="w-full bg-[#1E1E2E] border border-white/5 text-white text-sm rounded-xl px-3 py-2.5 focus:outline-none focus:border-violet-500/40 transition"/>
+                        </div>
                     </div>
 
                     <div class="border-t border-white/5 pt-4 mt-4">
@@ -341,22 +359,31 @@ async function sendDirectNotification(e) {
     btn.disabled = true;
     btn.innerHTML = `<svg class="animate-spin -ml-1 mr-3 h-4 w-5 text-white inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Sending...`;
 
-    const payload = {
-        title: document.getElementById('notif-title').value,
-        body: document.getElementById('notif-body').value,
-        image_url: document.getElementById('notif-image').value,
-        screen: document.getElementById('notif-screen').value,
-        drama_slug: document.getElementById('notif-slug').value,
-        episode_number: document.getElementById('notif-episode').value,
-        item_type: document.getElementById('notif-item-type').value,
-        _token: '{{ csrf_token() }}'
-    };
+    const formData = new FormData();
+    formData.append('title', document.getElementById('notif-title').value);
+    formData.append('body', document.getElementById('notif-body').value);
+    formData.append('screen', document.getElementById('notif-screen').value);
+    formData.append('drama_slug', document.getElementById('notif-slug').value);
+    formData.append('episode_number', document.getElementById('notif-episode').value);
+    formData.append('item_type', document.getElementById('notif-item-type').value);
+    formData.append('image_type', document.getElementById('notif-image-type').value);
+    formData.append('_token', '{{ csrf_token() }}');
+
+    const imageType = document.getElementById('notif-image-type').value;
+    if (imageType === 'manual') {
+        const fileInput = document.getElementById('notif-image-file');
+        if (fileInput.files[0]) {
+            formData.append('image', fileInput.files[0]);
+        }
+    } else {
+        formData.append('image_url', document.getElementById('notif-image').value);
+    }
 
     try {
         const res = await fetch('/admin/api/notifications/send', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-            body: JSON.stringify(payload)
+            headers: { 'Accept': 'application/json' },
+            body: formData
         });
         
         const data = await res.json();
@@ -364,6 +391,7 @@ async function sendDirectNotification(e) {
         if (res.ok && data.success) {
             showToast(data.message);
             document.getElementById('notification-form').reset();
+            toggleDirectImageInput();
         } else {
             showToast(data.message || 'Unknown error occurred', 'error');
         }
@@ -372,6 +400,20 @@ async function sendDirectNotification(e) {
     } finally {
         btn.disabled = false;
         btn.innerHTML = originalText;
+    }
+}
+
+function toggleDirectImageInput() {
+    const type = document.getElementById('notif-image-type').value;
+    const pathWrapper = document.getElementById('direct-image-path-wrapper');
+    const fileWrapper = document.getElementById('direct-image-file-wrapper');
+
+    if (type === 'manual') {
+        pathWrapper.classList.add('hidden');
+        fileWrapper.classList.remove('hidden');
+    } else {
+        pathWrapper.classList.remove('hidden');
+        fileWrapper.classList.add('hidden');
     }
 }
 

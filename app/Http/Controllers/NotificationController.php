@@ -19,7 +19,9 @@ class NotificationController extends Controller
         $request->validate([
             'title' => 'required|string|max:255',
             'body' => 'required|string',
-            'image_url' => 'nullable|url',
+            'image_type' => 'nullable|string|in:url,manual',
+            'image_url' => 'nullable|string',
+            'image' => 'required_if:image_type,manual|image|max:4096',
             'screen' => 'nullable|string',
             'drama_slug' => 'nullable|string',
             'episode_number' => 'nullable|string',
@@ -27,10 +29,33 @@ class NotificationController extends Controller
         ]);
 
         try {
+            $imageUrl = $request->input('image_url');
+
+            if ($request->input('image_type') === 'manual' && $request->hasFile('image')) {
+                // Delete last direct broadcast image to save space
+                $oldPath = \App\Models\Setting::getValue('last_direct_broadcast_image');
+                if ($oldPath) {
+                    $oldFile = public_path($oldPath);
+                    if (file_exists($oldFile) && is_file($oldFile)) {
+                        @unlink($oldFile);
+                    }
+                }
+
+                $imageUrl = $this->convertAndStoreWebp($request->file('image'));
+                \App\Models\Setting::setValue('last_direct_broadcast_image', $imageUrl);
+            }
+
+            // Convert relative image path to TMDB URL or absolute URL
+            if ($imageUrl && !str_starts_with($imageUrl, 'http') && !str_starts_with($imageUrl, '/uploads/')) {
+                if (str_starts_with($imageUrl, '/')) {
+                    $imageUrl = 'https://image.tmdb.org/t/p/w780' . $imageUrl;
+                }
+            }
+
             $this->sendFCMNotification(
                 $request->input('title'),
                 $request->input('body'),
-                $request->input('image_url'),
+                $imageUrl,
                 $request->input('screen'),
                 $request->input('drama_slug'),
                 $request->input('episode_number'),
