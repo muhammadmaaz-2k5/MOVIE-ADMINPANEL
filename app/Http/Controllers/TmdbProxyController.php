@@ -48,7 +48,7 @@ class TmdbProxyController extends Controller
             }
         }
 
-        // 1. Intercept Details requests for Custom Movies (ID > 1 Billion)
+        // 1. Intercept Details requests for Custom Movies (ID > 1 Billion) or overridden TMDB items
         if (preg_match('/^(movie|tv)\/(\d+)(.*)$/', $path, $matches)) {
             $type = $matches[1];
             $id = (int)$matches[2];
@@ -57,8 +57,14 @@ class TmdbProxyController extends Controller
             if ($id >= self::OFFSET) {
                 $customId = $id - self::OFFSET;
                 $customMovie = CustomMovie::find($customId);
+            } else {
+                $customMovie = CustomMovie::where('tmdb_id', $id)
+                    ->where('type', $type)
+                    ->where('is_active', true)
+                    ->first();
+            }
 
-                if ($customMovie) {
+            if ($customMovie) {
                     // If it is a sub-resource request (e.g. /credits, /videos, /similar, /reviews, /season/X)
                     if (!empty($suffix)) {
                         // Forward request using original TMDB ID
@@ -209,6 +215,7 @@ class TmdbProxyController extends Controller
                 $tmdbResults['results'] = $mergedResults;
                 $tmdbResults['total_results'] = (isset($tmdbResults['total_results']) ? $tmdbResults['total_results'] : 0) + count($customResults);
 
+                $tmdbResults = $this->applyCustomOverridesToList($tmdbResults);
                 return response()->json($tmdbResults);
             }
         }
@@ -325,6 +332,7 @@ class TmdbProxyController extends Controller
                     $tmdbResults['total_results'] = (isset($tmdbResults['total_results']) ? $tmdbResults['total_results'] : 0) + count($customResults);
                 }
 
+                $tmdbResults = $this->applyCustomOverridesToList($tmdbResults);
                 return response()->json($tmdbResults);
             }
         }
@@ -336,14 +344,85 @@ class TmdbProxyController extends Controller
                 ->timeout(15)
                 ->get("{$baseUrl}/{$path}", $queryParams);
                 
+            if ($response->successful()) {
+                $contentType = $response->header('Content-Type');
+                if ($contentType && str_contains($contentType, 'application/json')) {
+                    $jsonData = $response->json();
+                    if (is_array($jsonData)) {
+                        $jsonData = $this->applyCustomOverridesToList($jsonData);
+                        return response()->json($jsonData, $response->status());
+                    }
+                }
+            }
+
             return response($response->body(), $response->status())
-                ->header('Content-Type', 'application/json');
+                ->header('Content-Type', $response->header('Content-Type') ?: 'application/json');
         } catch (\Exception $e) {
             return response()->json([
                 'error' => 'Failed to reach TMDB API',
                 'message' => $e->getMessage()
             ], 500);
         }
+    }
+
+    private function applyCustomOverridesToList(array $data): array
+    {
+        if (!isset($data['results']) || !is_array($data['results'])) {
+            return $data;
+        }
+
+        // Get all TMDB IDs present in this results list
+        $tmdbIds = [];
+        foreach ($data['results'] as $item) {
+            if (isset($item['id']) && is_numeric($item['id'])) {
+                $tmdbIds[] = (int)$item['id'];
+            }
+        }
+
+        if (empty($tmdbIds)) {
+            return $data;
+        }
+
+        // Fetch custom override movies for these TMDB IDs
+        $overrides = CustomMovie::whereIn('tmdb_id', $tmdbIds)
+            ->where('is_active', true)
+            ->get()
+            ->keyBy('tmdb_id');
+
+        if ($overrides->isEmpty()) {
+            return $data;
+        }
+
+        // Apply overrides
+        foreach ($data['results'] as &$item) {
+            if (isset($item['id']) && is_numeric($item['id'])) {
+                $tid = (int)$item['id'];
+                if (isset($overrides[$tid])) {
+                    $m = $overrides[$tid];
+                    $item['title'] = $m->title;
+                    $item['name'] = $m->title; // for tv/multi
+                    $item['overview'] = $m->overview ?: ($item['overview'] ?? '');
+                    if ($m->poster_path) {
+                        $item['poster_path'] = $m->poster_path;
+                    }
+                    if ($m->backdrop_path) {
+                        $item['backdrop_path'] = $m->backdrop_path;
+                    }
+                    if ($m->rating) {
+                        $item['vote_average'] = (float)$m->rating;
+                    }
+                    if ($m->year) {
+                        $dateKey = isset($item['release_date']) ? 'release_date' : (isset($item['first_air_date']) ? 'first_air_date' : null);
+                        if ($dateKey) {
+                            $item[$dateKey] = "{$m->year}-01-01";
+                        }
+                    }
+                    $item['is_custom'] = true;
+                }
+            }
+        }
+
+        return $data;
     }
 
     private function applyFilters($dbQuery, array $params)
