@@ -46,10 +46,7 @@ class ConfigController extends Controller
                 $customId = (int)$id - 1000000000;
                 $customMovie = \App\Models\CustomMovie::with('streams')->find($customId);
             } else {
-                $customMovie = \App\Models\CustomMovie::with('streams')
-                    ->where('tmdb_id', (int)$id)
-                    ->where('is_active', true)
-                    ->first();
+                $customMovie = null;
             }
         }
 

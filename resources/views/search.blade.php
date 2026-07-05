@@ -347,31 +347,9 @@
                     endpoint = `search/${selectedMediaType}`;
                 }
 
-                // Parallel fetch TMDB + local custom movies database
-                const customUrl = `/api/search/custom?query=${encodeURIComponent(searchQuery)}`;
-                const [res, customRes] = await Promise.all([
-                    fetch(`/api/tmdb/${endpoint}?${new URLSearchParams(params)}`).then(r => r.json()),
-                    fetch(customUrl).then(r => r.json())
-                ]);
-
-                // Parse custom movies
-                const parsedCustom = customRes
-                    .filter(m => selectedMediaType === 'all' || m.type === selectedMediaType)
-                    .map(m => ({
-                        id: m.id,
-                        title: m.title,
-                        type: 'custom',
-                        posterUrl: m.poster_path 
-                            ? (m.poster_path.startsWith('http') ? m.poster_path : 'https://image.tmdb.org/t/p/w342' + m.poster_path)
-                            : 'https://placehold.co/342x513/1E1E2E/FFF?text=No+Image',
-                        rating: m.rating || 0.0,
-                        year: m.year || '',
-                        language: m.language || 'Hindi',
-                        isCustomMovie: true
-                    }));
-
-                const parsedTmdb = parseResults(res.results || [], selectedMediaType);
-                fetchedItems = [...parsedCustom, ...parsedTmdb];
+                // Fetch TMDB results (which already merges local custom movies on the backend proxy)
+                const res = await fetch(`/api/tmdb/${endpoint}?${new URLSearchParams(params)}`).then(r => r.json());
+                fetchedItems = parseResults(res.results || [], selectedMediaType);
             } else {
                 // Discover/Popular flow (default)
                 label.innerText = "Popular Discoveries";
@@ -451,7 +429,9 @@
                 posterUrl: posterUrl,
                 rating: r.vote_average ? parseFloat(r.vote_average.toFixed(1)) : 0.0,
                 year: year,
-                department: r.known_for_department || 'Acting'
+                department: r.known_for_department || 'Acting',
+                is_custom: r.is_custom || false,
+                language: r.language || ''
             };
         });
     }
@@ -465,13 +445,17 @@
 
         list.innerHTML = items.map(item => {
             const isPerson = item.type === 'person';
-            const targetUrl = isPerson ? `/actor/${item.id}` : (item.type === 'custom' ? `/details/custom/${item.id}` : `/details/${item.type}/${item.id}`);
+            const dbId = item.id >= 1000000000 ? item.id - 1000000000 : item.id;
+            const targetUrl = isPerson ? `/actor/${item.id}` : (item.is_custom ? `/details/custom/${dbId}` : `/details/${item.type}/${item.id}`);
             
             // Badges
             let badgeBg = 'bg-[#1E1E2E] text-slate-400 border-white/5';
             let badgeText = 'Unknown';
             
-            if (item.type === 'movie') {
+            if (item.is_custom) {
+                badgeBg = 'bg-violet-600/20 text-violet-400 border-violet-500/20';
+                badgeText = item.language ? item.language.toUpperCase() : 'Custom';
+            } else if (item.type === 'movie') {
                 badgeBg = 'bg-violet-600/10 text-violet-400 border-violet-500/10';
                 badgeText = 'Movie';
             } else if (item.type === 'tv') {
@@ -480,9 +464,6 @@
             } else if (item.type === 'person') {
                 badgeBg = 'bg-[#FDAA07]/10 text-[#FDAA07] border-[#FDAA07]/10';
                 badgeText = 'Person';
-            } else if (item.type === 'custom') {
-                badgeBg = 'bg-violet-600/20 text-violet-400 border-violet-500/20';
-                badgeText = item.language ? item.language.toUpperCase() : 'Custom';
             }
 
             return `

@@ -367,8 +367,6 @@
             totalPages = res.total_pages || 1;
 
             if (page === 1 && customItems.length > 0) {
-                const customTmdbIds = customItems.map(c => c.tmdb_id);
-                items = items.filter(item => !customTmdbIds.includes(item.id));
                 items = [...customItems, ...items];
             }
 

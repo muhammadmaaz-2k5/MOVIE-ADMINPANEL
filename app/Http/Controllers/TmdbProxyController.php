@@ -58,10 +58,7 @@ class TmdbProxyController extends Controller
                 $customId = $id - self::OFFSET;
                 $customMovie = CustomMovie::find($customId);
             } else {
-                $customMovie = CustomMovie::where('tmdb_id', $id)
-                    ->where('type', $type)
-                    ->where('is_active', true)
-                    ->first();
+                $customMovie = null;
             }
 
             if ($customMovie) {
@@ -137,7 +134,6 @@ class TmdbProxyController extends Controller
                         'is_custom' => true,
                         'custom_language' => $customMovie->language
                     ]);
-                }
             }
         }
 
@@ -215,7 +211,6 @@ class TmdbProxyController extends Controller
                 $tmdbResults['results'] = $mergedResults;
                 $tmdbResults['total_results'] = (isset($tmdbResults['total_results']) ? $tmdbResults['total_results'] : 0) + count($customResults);
 
-                $tmdbResults = $this->applyCustomOverridesToList($tmdbResults);
                 return response()->json($tmdbResults);
             }
         }
@@ -332,7 +327,6 @@ class TmdbProxyController extends Controller
                     $tmdbResults['total_results'] = (isset($tmdbResults['total_results']) ? $tmdbResults['total_results'] : 0) + count($customResults);
                 }
 
-                $tmdbResults = $this->applyCustomOverridesToList($tmdbResults);
                 return response()->json($tmdbResults);
             }
         }

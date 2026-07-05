@@ -208,10 +208,6 @@
 
             // --- ALGORITHM: Custom Exclusives Merge & Promotion ---
             if (customRes && customRes.length > 0) {
-                const customTmdbIds = customRes.map(c => c.tmdb_id);
-                trendingItems = trendingItems.filter(item => !customTmdbIds.includes(item.id));
-                popularItems = popularItems.filter(item => !customTmdbIds.includes(item.id));
-
                 // Prepend custom exclusives to give them maximum visibility
                 trendingItems = [...customRes, ...trendingItems];
                 popularItems = [...customRes, ...popularItems];
