@@ -25,6 +25,33 @@
             </button>
         </div>
     </div>
+    <!-- Admin Modules Navigation Tabs -->
+    <div class="flex flex-wrap gap-2.5 pb-2">
+        <a href="{{ route('admin.movie-manager') }}" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition {{ request()->routeIs('admin.movie-manager') ? 'bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white shadow-lg shadow-violet-500/10' : 'bg-[#1E1E2E] border border-white/5 text-slate-300 hover:bg-white/5 hover:text-white' }}">
+            🎬 Movie Manager
+        </a>
+        <a href="{{ route('admin.tv-manager') }}" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition {{ request()->routeIs('admin.tv-manager') ? 'bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white shadow-lg shadow-violet-500/10' : 'bg-[#1E1E2E] border border-white/5 text-slate-300 hover:bg-white/5 hover:text-white' }}">
+            📺 TV Shows Manager
+        </a>
+        <a href="{{ route('admin.anime-manager') }}" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition {{ request()->routeIs('admin.anime-manager') ? 'bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white shadow-lg shadow-violet-500/10' : 'bg-[#1E1E2E] border border-white/5 text-slate-300 hover:bg-white/5 hover:text-white' }}">
+            ⛩️ Anime Manager
+        </a>
+        <a href="{{ route('admin.download-manager') }}" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition {{ request()->routeIs('admin.download-manager') ? 'bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white shadow-lg shadow-violet-500/10' : 'bg-[#1E1E2E] border border-white/5 text-slate-300 hover:bg-white/5 hover:text-white' }}">
+            📂 Download Manager
+        </a>
+        <a href="{{ route('admin.home-section-manager') }}" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition {{ request()->routeIs('admin.home-section-manager') ? 'bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white shadow-lg shadow-violet-500/10' : 'bg-[#1E1E2E] border border-white/5 text-slate-300 hover:bg-white/5 hover:text-white' }}">
+            🔥 Home Sections
+        </a>
+        <a href="{{ route('admin.video-servers') }}" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition {{ request()->routeIs('admin.video-servers') ? 'bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white shadow-lg shadow-violet-500/10' : 'bg-[#1E1E2E] border border-white/5 text-slate-300 hover:bg-white/5 hover:text-white' }}">
+            ⚙️ Video Servers
+        </a>
+        <a href="{{ route('admin.notification-manager') }}" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition {{ request()->routeIs('admin.notification-manager') ? 'bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white shadow-lg shadow-violet-500/10' : 'bg-[#1E1E2E] border border-white/5 text-slate-300 hover:bg-white/5 hover:text-white' }}">
+            🔔 Notifications
+        </a>
+        <a href="{{ route('admin.settings') }}" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition {{ request()->routeIs('admin.settings') ? 'bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white shadow-lg shadow-violet-500/10' : 'bg-[#1E1E2E] border border-white/5 text-slate-300 hover:bg-white/5 hover:text-white' }}">
+            🛠️ Settings
+        </a>
+    </div>
 
     <!-- App Mode -->
     <div class="glass rounded-3xl overflow-hidden divide-y divide-white/5">
@@ -114,6 +141,56 @@
                     />
                 </div>
 
+                <!-- WebView Ads Placements Overrides -->
+                <div class="p-5 bg-white/2 rounded-2xl border border-white/5 space-y-4">
+                    <button type="button" class="w-full flex items-center justify-between text-left focus:outline-none" onclick="togglePlacementSection()">
+                        <div>
+                            <p class="text-sm font-bold text-white">WebView Ads Placements Overrides</p>
+                            <p class="text-xs text-slate-400 mt-1">Configure individual settings and custom URLs for each screen's ad webview.</p>
+                        </div>
+                        <span id="placement-chevron" class="text-slate-400 text-xs transition-transform duration-200">▼</span>
+                    </button>
+                    <div id="placement-section-content" class="hidden pt-4 border-t border-white/5 grid grid-cols-1 md:grid-cols-2 gap-4">
+                        @php
+                            $placements = [
+                                'home_banner' => 'Home Page Banner',
+                                'home_inline' => 'Home Page Inline Cards',
+                                'search_banner' => 'Search Page Banner',
+                                'search_inline' => 'Search Page Inline Cards',
+                                'detail_banner' => 'Detail Page Banner',
+                                'detail_inline' => 'Detail Page Inline Cards',
+                                'player_banner' => 'Player Screen Banner',
+                                'browse_banner' => 'Browse Page Banner',
+                                'browse_inline' => 'Browse Page Inline Cards',
+                                'season_banner' => 'Season Page Banner',
+                                'actor_banner' => 'Actor Page Banner',
+                                'actor_inline' => 'Actor Page Inline Cards',
+                                'category_banner' => 'Category Page Banner',
+                                'seeall_banner' => 'SeeAll Page Banner',
+                                'language_banner' => 'Language Page Banner',
+                            ];
+                        @endphp
+                        
+                        @foreach ($placements as $key => $label)
+                            <div class="p-4 bg-white/2 rounded-xl border border-white/5 space-y-3">
+                                <div class="flex items-center justify-between gap-4">
+                                    <p class="text-xs font-bold text-white">{{ $label }}</p>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" id="enable_ad_{{ $key }}" class="sr-only peer">
+                                        <div class="w-8 h-4.5 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-violet-500"></div>
+                                    </label>
+                                </div>
+                                <input
+                                    type="url"
+                                    id="ad_url_{{ $key }}"
+                                    placeholder="Use Global URL"
+                                    class="w-full bg-[#1E1E2E] border border-white/5 text-white text-xs rounded-lg px-3 py-2 focus:outline-none focus:border-violet-500/40 transition font-mono"
+                                />
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+
                 <div class="flex justify-end pt-2">
                     <button type="submit" id="btn-save" class="inline-flex items-center gap-2 bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white font-bold px-6 py-2.5 rounded-2xl hover:from-violet-500 hover:to-fuchsia-500 transition shadow-lg shadow-violet-500/20 text-sm">
                         Save Settings
@@ -159,6 +236,18 @@ async function loadSettings() {
     }
 }
 
+function togglePlacementSection() {
+    const content = document.getElementById('placement-section-content');
+    const chevron = document.getElementById('placement-chevron');
+    if (content.classList.contains('hidden')) {
+        content.classList.remove('hidden');
+        chevron.style.transform = 'rotate(180deg)';
+    } else {
+        content.classList.add('hidden');
+        chevron.style.transform = 'rotate(0deg)';
+    }
+}
+
 function applySettingsToForm(data) {
     document.getElementById('ads_enabled').checked = !!data.ads_enabled;
     document.getElementById('enable_webview_ads').checked = !!data.enable_webview_ads;
@@ -166,6 +255,19 @@ function applySettingsToForm(data) {
     const mode = data.app_mode === 'safe_review' ? 'safe_review' : 'live';
     document.getElementById('app_mode_safe_review').checked = mode === 'safe_review';
     document.getElementById('app_mode_live').checked = mode === 'live';
+
+    const placements = [
+        'home_banner', 'home_inline', 'search_banner', 'search_inline',
+        'detail_banner', 'detail_inline', 'player_banner', 'browse_banner',
+        'browse_inline', 'season_banner', 'actor_banner', 'actor_inline',
+        'category_banner', 'seeall_banner', 'language_banner'
+    ];
+    placements.forEach(p => {
+        const toggle = document.getElementById(`enable_ad_${p}`);
+        const urlInput = document.getElementById(`ad_url_${p}`);
+        if (toggle) toggle.checked = data[`enable_ad_${p}`] !== false; // default true
+        if (urlInput) urlInput.value = data[`ad_url_${p}`] || '';
+    });
 }
 
 function updateStatusBadge(data) {
@@ -212,6 +314,19 @@ async function saveSettings(e) {
             webview_ad_url: document.getElementById('webview_ad_url').value.trim(),
             app_mode: document.getElementById('app_mode_safe_review').checked ? 'safe_review' : 'live',
         };
+
+        const placements = [
+            'home_banner', 'home_inline', 'search_banner', 'search_inline',
+            'detail_banner', 'detail_inline', 'player_banner', 'browse_banner',
+            'browse_inline', 'season_banner', 'actor_banner', 'actor_inline',
+            'category_banner', 'seeall_banner', 'language_banner'
+        ];
+        placements.forEach(p => {
+            const toggle = document.getElementById(`enable_ad_${p}`);
+            const urlInput = document.getElementById(`ad_url_${p}`);
+            if (toggle) payload[`enable_ad_${p}`] = toggle.checked;
+            if (urlInput) payload[`ad_url_${p}`] = urlInput.value.trim();
+        });
 
         const res = await fetch(API_BASE, {
             method: 'PUT',
