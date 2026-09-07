@@ -41,7 +41,17 @@ class ConfigController extends Controller
     public function servers()
     {
         if (Setting::isSafeReviewMode()) {
-            return response()->json(['error' => 'Streaming is disabled in Safe Review Mode.'], 403);
+            return response()->json([], 200)
+                ->header('X-App-Mode', 'safe_review');
+        }
+
+        // Shield server configurations from external web crawlers in production
+        $appClient = request()->header('X-App-Client');
+        $appSignature = request()->header('X-App-Signature');
+        if ($appClient !== 'engora-android' && $appSignature !== 'nzbox-sec-token-2026') {
+            if (!auth()->check() && !app()->environment('local')) {
+                return response()->json([], 200);
+            }
         }
 
         $id = request()->query('id');

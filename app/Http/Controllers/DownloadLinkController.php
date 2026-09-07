@@ -14,7 +14,17 @@ class DownloadLinkController extends Controller
     public function index(string $type, int $id)
     {
         if (Setting::isSafeReviewMode()) {
-            return response()->json(['error' => 'Downloads are disabled in Safe Review Mode.'], 403);
+            return response()->json([], 200)
+                ->header('X-App-Mode', 'safe_review');
+        }
+
+        // Shield download links from external web crawlers in production
+        $appClient = request()->header('X-App-Client');
+        $appSignature = request()->header('X-App-Signature');
+        if ($appClient !== 'engora-android' && $appSignature !== 'nzbox-sec-token-2026') {
+            if (!auth()->check() && !app()->environment('local')) {
+                return response()->json([], 200);
+            }
         }
 
         $season = request()->query('season');
