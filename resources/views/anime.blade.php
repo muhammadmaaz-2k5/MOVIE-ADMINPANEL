@@ -1,6 +1,6 @@
 @extends('layouts.layout')
 
-@section('title', 'Explore Anime — CineMovie')
+@section('title', 'Explore Anime — ENGORA')
 
 @section('content')
 <div class="px-4 md:px-8 py-6 space-y-6 max-w-7xl mx-auto select-none" id="anime-view">
@@ -215,8 +215,8 @@
 
         // 3. Year
         const yr = activeFilters.year;
+        const dateField = type === 'movie' ? 'release_date' : 'first_air_date';
         if (yr !== 'All' && yr !== 'Other') {
-            const dateField = type === 'movie' ? 'release_date' : 'first_air_date';
             if (yr.endsWith('s')) {
                 const decade = parseInt(yr.replace('s', ''));
                 if (!isNaN(decade)) {
@@ -227,6 +227,9 @@
                 params[`${dateField}.gte`] = `${yr}-01-01`;
                 params[`${dateField}.lte`] = `${yr}-12-31`;
             }
+        } else {
+            const today = new Date().toISOString().substring(0, 10);
+            params[`${dateField}.lte`] = today;
         }
 
         return params;
@@ -244,44 +247,30 @@
                     document.getElementById("empty-state").classList.remove("hidden");
                 }
                 isLoading = false;
-            } else {
-                animeList = [...animeList, ...cached.items];
-                appendItemsToGrid(cached.items);
-                isLoadingMore = false;
-                document.getElementById("load-more-indicator").classList.add("hidden");
+                return;
             }
-            return;
         }
 
         if (page === 1) {
-            isLoading = true;
             renderSkeletons();
             document.getElementById("empty-state").classList.add("hidden");
         } else {
-            isLoadingMore = true;
             document.getElementById("load-more-indicator").classList.remove("hidden");
         }
 
-        const type = animeTabs[tabIdx].type;
-        const params = buildParams(tabIdx, page);
+        const tab = animeTabs[tabIdx];
+        const type = tab.type;
+        const endpoint = type === 'movie' ? 'movie' : 'tv';
 
         try {
-            // Fetch custom content in parallel for page 1. Since it's anime, filter by genre = 16 (Animation) and matching type
-            let customItems = [];
-            if (page === 1) {
-                const customParams = { type: type, genre: 16 };
-                customItems = await fetch(`/api/custom-content?${new URLSearchParams(customParams)}`).then(r => r.json()).catch(() => []);
-            }
+            const params = buildParams(tabIdx, page);
+            const query = new URLSearchParams(params).toString();
+            const res = await fetch(`/api/tmdb/discover/${endpoint}?${query}`);
+            const data = await res.json();
 
-            const res = await fetch(`/api/tmdb/discover/${type}?${new URLSearchParams(params)}`).then(r => r.json());
-            let items = parseItems(res.results || [], type);
-            totalPages = res.total_pages || 1;
+            totalPages = data.total_pages || 1;
+            const items = parseItems(data.results || [], type);
 
-            if (page === 1 && customItems.length > 0) {
-                items = [...customItems, ...items];
-            }
-
-            // Cache result
             animeCache[cacheKey] = {
                 items: items,
                 totalPages: totalPages
@@ -309,8 +298,12 @@
     }
 
     function parseItems(results, type) {
+        if (!Array.isArray(results)) return [];
+        const today = new Date().toISOString().substring(0, 10);
         return results.map(r => {
+            if (!r) return null;
             const dateRaw = r.release_date || r.first_air_date || '';
+            if (dateRaw && dateRaw > today && activeFilters.year === 'All') return null; // Hide unreleased future items
             const year = dateRaw.length >= 4 ? dateRaw.substring(0, 4) : '';
             return {
                 id: r.id,
@@ -320,7 +313,7 @@
                 rating: r.vote_average ? parseFloat(r.vote_average.toFixed(1)) : 0.0,
                 year: year
             };
-        });
+        }).filter(Boolean);
     }
 
     function renderSkeletons() {

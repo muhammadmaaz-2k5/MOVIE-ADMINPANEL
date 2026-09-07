@@ -33,3 +33,5 @@ Thumbs.db
 /public/4c8b9c00f1fb6c53b98b07b7c6b761b5.html
 /public/1d8d0e24f5e446a59ddc120556e7164b.txt
 /ADMIN-PANEL.zip
+composer.phar
+*-firebase-adminsdk-*.json

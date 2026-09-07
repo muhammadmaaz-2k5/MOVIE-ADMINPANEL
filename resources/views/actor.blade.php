@@ -1,6 +1,6 @@
 @extends('layouts.layout')
 
-@section('title', 'Actor Biography — CineMovie')
+@section('title', 'Actor Biography — ENGORA')
 
 @section('content')
 <div class="px-4 md:px-8 py-6 space-y-8 max-w-7xl mx-auto select-none" id="actor-container">
@@ -121,7 +121,7 @@
             ]);
 
             // Set Title & Basic Details
-            document.title = `${actor.name} — CineMovie`;
+            document.title = `${actor.name} — ENGORA`;
             document.getElementById("actor-name").innerText = actor.name;
             
             const profile = document.getElementById("actor-profile-img");

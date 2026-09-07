@@ -1,6 +1,6 @@
 @extends('layouts.layout')
 
-@section('title', 'Smart Search — CineMovie')
+@section('title', 'Smart Search — ENGORA')
 
 @section('content')
 <div class="px-4 md:px-8 py-6 space-y-6 max-w-7xl mx-auto select-none" id="search-view">

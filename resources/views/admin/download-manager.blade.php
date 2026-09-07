@@ -1,5 +1,5 @@
 @extends('layouts.layout')
-@section('title', 'Download Manager — CineMovie Admin')
+@section('title', 'Download Manager — ENGORA Admin')
 
 @section('content')
 <div class="px-6 py-8 max-w-7xl mx-auto space-y-8">

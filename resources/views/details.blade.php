@@ -1,6 +1,6 @@
 @extends('layouts.layout')
 
-@section('title', 'Loading details… — CineMovie')
+@section('title', 'Loading details… — ENGORA')
 
 @section('content')
 @php $isSafeMode = !$isLiveMode; @endphp
@@ -198,7 +198,7 @@
         <!-- Manage / Disclaimer footer -->
 <div class="px-6 py-3.5 border-t border-white/5 flex items-center justify-between gap-3">
             <p class="text-[10px] text-slate-500 leading-relaxed flex-1">
-                ⚠️ CineMovie does not host copyrighted content. Links are sourced externally.
+                ⚠️ ENGORA does not host copyrighted content. Links are sourced externally.
             </p>
             <a href="/admin/download-manager" target="_blank" class="flex-shrink-0 text-[10px] font-bold text-violet-400 hover:text-violet-300 transition flex items-center gap-1">
                 <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
@@ -418,7 +418,7 @@
             
             // Set Page Title
             const displayTitle = customMovieData ? customMovieData.title : (details.title || details.name);
-            document.title = `${displayTitle} — CineMovie`;
+            document.title = `${displayTitle} — ENGORA`;
 
             // Images
             const backdropPath = customMovieData && customMovieData.backdrop_path ? customMovieData.backdrop_path : details.backdrop_path;

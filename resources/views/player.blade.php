@@ -1,6 +1,6 @@
 @extends('layouts.layout')
 
-@section('title', 'Playing Video — CineMovie')
+@section('title', 'Playing Video — ENGORA')
 
 @section('content')
 <div class="px-4 md:px-8 py-6 space-y-6 max-w-5xl mx-auto select-none">
@@ -182,7 +182,7 @@
             tvDetails = data;
             
             const title = customMovieData ? customMovieData.title : (data.title || data.name);
-            document.title = `Playing: ${title} — CineMovie`;
+            document.title = `Playing: ${title} — ENGORA`;
             document.getElementById("player-title").innerText = title;
 
             if (targetType === 'tv') {

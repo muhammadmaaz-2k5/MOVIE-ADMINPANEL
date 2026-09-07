@@ -1,6 +1,6 @@
 @extends('layouts.layout')
 
-@section('title', 'Explore Movies — CineMovie')
+@section('title', 'Explore Movies — ENGORA')
 
 @section('content')
 <div class="px-4 md:px-8 py-6 space-y-6 max-w-7xl mx-auto select-none" id="movies-view">
@@ -301,6 +301,9 @@
                 params['release_date.gte'] = `${yr}-01-01`;
                 params['release_date.lte'] = `${yr}-12-31`;
             }
+        } else {
+            const today = new Date().toISOString().substring(0, 10);
+            params['primary_release_date.lte'] = today;
         }
 
         return params;
@@ -398,8 +401,12 @@
     }
 
     function parseItems(results) {
+        if (!Array.isArray(results)) return [];
+        const today = new Date().toISOString().substring(0, 10);
         return results.map(r => {
+            if (!r) return null;
             const dateRaw = r.release_date || '';
+            if (dateRaw && dateRaw > today && activeFilters.year === 'All') return null; // Hide unreleased future items
             const year = dateRaw.length >= 4 ? dateRaw.substring(0, 4) : '';
             return {
                 id: r.id,
@@ -409,7 +416,7 @@
                 rating: r.vote_average ? parseFloat(r.vote_average.toFixed(1)) : 0.0,
                 year: year
             };
-        });
+        }).filter(Boolean);
     }
 
     function renderSkeletons() {

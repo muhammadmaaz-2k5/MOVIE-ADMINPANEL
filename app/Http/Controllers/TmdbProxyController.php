@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\CustomMovie;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 
 class TmdbProxyController extends Controller
@@ -30,13 +31,88 @@ class TmdbProxyController extends Controller
         return $params;
     }
 
+    private function determineTtl(string $path): int
+    {
+        if (preg_match('/^(movie|tv)\/\d+$/', $path)) {
+            return 43200; // 12 hours for detail pages
+        }
+        if (preg_match('/(credits|videos|similar|recommendations|season|reviews)/', $path)) {
+            return 21600; // 6 hours for sub-resources
+        }
+        if (preg_match('/^(discover|trending)/', $path)) {
+            return 1800; // 30 minutes for dynamic feeds
+        }
+        if (preg_match('/^search/', $path)) {
+            return 900; // 15 minutes for search queries
+        }
+        return 3600; // 1 hour default
+    }
+
     public function proxy(Request $request, $path)
+    {
+        $queryParams = $this->parseRawQuery($request->getQueryString() ?? '');
+        $cacheKey = 'tmdb_proxy:' . md5($path . ':' . http_build_query($queryParams));
+        $ttl = $this->determineTtl($path);
+
+        // Check Cache HIT
+        if (Cache::has($cacheKey)) {
+            $cached = Cache::get($cacheKey);
+            return response($cached['body'], $cached['status'] ?? 200)
+                ->header('Content-Type', 'application/json')
+                ->header('X-Cache', 'HIT')
+                ->header('X-Cache-Key', $cacheKey)
+                ->header('X-Cache-TTL', (string)$ttl)
+                ->header('Cache-Control', "public, max-age={$ttl}");
+        }
+
+        // Cache MISS - execute request
+        $response = $this->executeProxy($request, $path, $queryParams);
+
+        if ($response->getStatusCode() === 200) {
+            Cache::put($cacheKey, [
+                'body' => $response->getContent(),
+                'status' => 200,
+            ], $ttl);
+        }
+
+        return $response
+            ->header('X-Cache', 'MISS')
+            ->header('X-Cache-Key', $cacheKey)
+            ->header('X-Cache-TTL', (string)$ttl)
+            ->header('Cache-Control', "public, max-age={$ttl}");
+    }
+
+    public function fetch(string $path, array $queryParams = []): array
+    {
+        $cacheKey = 'tmdb_proxy:' . md5($path . ':' . http_build_query($queryParams));
+        $ttl = $this->determineTtl($path);
+
+        if (Cache::has($cacheKey)) {
+            $cached = Cache::get($cacheKey);
+            $decoded = json_decode($cached['body'], true);
+            if (is_array($decoded)) return $decoded;
+        }
+
+        $request = Request::create('/api/tmdb/' . $path, 'GET', $queryParams);
+        $response = $this->executeProxy($request, $path, $queryParams);
+
+        if ($response->getStatusCode() === 200) {
+            $content = $response->getContent();
+            Cache::put($cacheKey, [
+                'body' => $content,
+                'status' => 200,
+            ], $ttl);
+            $decoded = json_decode($content, true);
+            if (is_array($decoded)) return $decoded;
+        }
+
+        return [];
+    }
+
+    private function executeProxy(Request $request, $path, array $queryParams)
     {
         $token = env('TMDB_BEARER_TOKEN');
         $baseUrl = 'https://api.themoviedb.org/3';
-        // Parse the raw query string to preserve dot-notation params like release_date.gte
-        // (PHP's $_GET and parse_str() both convert dots to underscores, breaking TMDB date filters)
-        $queryParams = $this->parseRawQuery($request->getQueryString() ?? '');
 
         // Translate dubbed languages for TMDb to return both Hollywood (en) and original language
         $langCode = isset($queryParams['with_original_language']) ? $queryParams['with_original_language'] : null;
@@ -45,6 +121,18 @@ class TmdbProxyController extends Controller
             $cleanLang = strtolower(explode('-', $langCode)[0]);
             if (in_array($cleanLang, $dubbedCodes)) {
                 $queryParams['with_original_language'] = "en|{$cleanLang}";
+            }
+        }
+
+        // Enforce released-only content (no unreleased / upcoming items unless explicitly requested)
+        $today = date('Y-m-d');
+        if (str_starts_with($path, 'discover/movie')) {
+            if (!isset($queryParams['primary_release_date.lte']) && !isset($queryParams['release_date.lte'])) {
+                $queryParams['primary_release_date.lte'] = $today;
+            }
+        } elseif (str_starts_with($path, 'discover/tv')) {
+            if (!isset($queryParams['first_air_date.lte']) && !isset($queryParams['air_date.lte'])) {
+                $queryParams['first_air_date.lte'] = $today;
             }
         }
 

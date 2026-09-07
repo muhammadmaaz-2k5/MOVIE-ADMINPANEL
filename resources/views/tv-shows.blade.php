@@ -1,6 +1,6 @@
 @extends('layouts.layout')
 
-@section('title', 'Explore TV Shows — CineMovie')
+@section('title', 'Explore TV Shows — ENGORA')
 
 @section('content')
 <div class="px-4 md:px-8 py-6 space-y-6 max-w-7xl mx-auto select-none" id="tv-shows-view">
@@ -300,6 +300,9 @@
                 params['first_air_date.gte'] = `${yr}-01-01`;
                 params['first_air_date.lte'] = `${yr}-12-31`;
             }
+        } else {
+            const today = new Date().toISOString().substring(0, 10);
+            params['first_air_date.lte'] = today;
         }
 
         return params;
@@ -317,6 +320,7 @@
                     document.getElementById("empty-state").classList.remove("hidden");
                 }
                 isLoading = false;
+                return;
             } else {
                 tvShowsList = [...tvShowsList, ...cached.items];
                 appendItemsToGrid(cached.items);
@@ -335,41 +339,15 @@
             document.getElementById("load-more-indicator").classList.remove("hidden");
         }
 
-        const tab = tvTabs[tabIdx];
-        let url = '';
-        let params = {};
-
-        if (tab.trending && isFiltersDefault()) {
-            url = '/api/tmdb/trending/tv/week';
-            params = { page: page };
-        } else {
-            url = '/api/tmdb/discover/tv';
-            params = buildParams(tabIdx, page);
-        }
-
         try {
-            // Fetch custom content in parallel for page 1
-            let customItems = [];
-            if (page === 1) {
-                const customParams = { type: 'tv' };
-                if (tab.genreId !== null) {
-                    customParams.genre = tab.genreId;
-                } else if (activeFilters.genre !== 'All') {
-                    const gid = genreIds[activeFilters.genre];
-                    if (gid) customParams.genre = gid;
-                }
-                customItems = await fetch(`/api/custom-content?${new URLSearchParams(customParams)}`).then(r => r.json()).catch(() => []);
-            }
+            const params = buildParams(tabIdx, page);
+            const query = new URLSearchParams(params).toString();
+            const res = await fetch(`/api/tmdb/discover/tv?${query}`);
+            const data = await res.json();
 
-            const res = await fetch(`${url}?${new URLSearchParams(params)}`).then(r => r.json());
-            let items = parseItems(res.results || []);
-            totalPages = res.total_pages || 1;
+            totalPages = data.total_pages || 1;
+            const items = parseItems(data.results || []);
 
-            if (page === 1 && customItems.length > 0) {
-                items = [...customItems, ...items];
-            }
-
-            // Cache result
             tvCache[cacheKey] = {
                 items: items,
                 totalPages: totalPages
@@ -397,8 +375,12 @@
     }
 
     function parseItems(results) {
+        if (!Array.isArray(results)) return [];
+        const today = new Date().toISOString().substring(0, 10);
         return results.map(r => {
+            if (!r) return null;
             const dateRaw = r.first_air_date || '';
+            if (dateRaw && dateRaw > today && activeFilters.year === 'All') return null; // Hide unreleased future items
             const year = dateRaw.length >= 4 ? dateRaw.substring(0, 4) : '';
             return {
                 id: r.id,
@@ -408,7 +390,7 @@
                 rating: r.vote_average ? parseFloat(r.vote_average.toFixed(1)) : 0.0,
                 year: year
             };
-        });
+        }).filter(Boolean);
     }
 
     function renderSkeletons() {

@@ -30,6 +30,7 @@ class HomeSectionController extends Controller
         ]);
 
         $section = HomeSection::create($validated);
+        self::clearHomeCaches();
         return response()->json($section, 201);
     }
 
@@ -47,6 +48,7 @@ class HomeSectionController extends Controller
         ]);
 
         $section->update($validated);
+        self::clearHomeCaches();
         return response()->json($section);
     }
 
@@ -54,6 +56,15 @@ class HomeSectionController extends Controller
     {
         $section = HomeSection::findOrFail($id);
         $section->delete();
+        self::clearHomeCaches();
         return response()->json(['message' => 'Deleted']);
+    }
+
+    public static function clearHomeCaches(): void
+    {
+        \Illuminate\Support\Facades\Cache::forget('api_config_home_sections');
+        for ($i = 0; $i <= 25; $i++) {
+            \Illuminate\Support\Facades\Cache::forget("api_home_feed_{$i}");
+        }
     }
 }

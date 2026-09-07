@@ -54,6 +54,7 @@ Route::get('/api/config/categories', [\App\Http\Controllers\ConfigController::cl
 Route::get('/api/config/servers',    [\App\Http\Controllers\ConfigController::class, 'servers']);
 Route::get('/api/config/home-sections', [\App\Http\Controllers\ConfigController::class, 'homeSections']);
 Route::get('/api/config/settings',    [\App\Http\Controllers\ConfigController::class, 'globalSettings']);
+Route::get('/api/home/feed',          [\App\Http\Controllers\HomeFeedController::class, 'feed']);
 
 // TMDB Proxy API
 Route::get('/api/tmdb/{any}', [\App\Http\Controllers\TmdbProxyController::class, 'proxy'])->where('any', '.*');

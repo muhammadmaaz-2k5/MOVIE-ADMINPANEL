@@ -18,5 +18,16 @@ class ScheduledNotification extends Model
         'screen',
         'drama_slug',
         'episode_number',
+        'scheduled_at',
+        'status',
+        'sent_at',
+        'failed_at',
+        'failure_reason',
+    ];
+
+    protected $casts = [
+        'scheduled_at' => 'datetime',
+        'sent_at'      => 'datetime',
+        'failed_at'    => 'datetime',
     ];
 }

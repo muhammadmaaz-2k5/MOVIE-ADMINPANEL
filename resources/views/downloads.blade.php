@@ -1,6 +1,6 @@
 @extends('layouts.layout')
 
-@section('title', 'My Downloads — CineMovie')
+@section('title', 'My Downloads — ENGORA')
 
 @section('content')
 <div class="px-4 md:px-8 py-6 space-y-8 max-w-7xl mx-auto select-none">

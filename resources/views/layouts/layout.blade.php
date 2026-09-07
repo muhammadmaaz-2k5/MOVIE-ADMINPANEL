@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>@yield('title', 'CineMovie — Stream Movies & TV Shows')</title>
+    <title>@yield('title', 'ENGORA — Stream Movies & TV Shows')</title>
     
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -20,7 +20,7 @@
         <aside class="hidden md:flex flex-col w-64 fixed inset-y-0 left-0 bg-[#121220] border-r border-[#1E1E2E] px-4 py-6 z-30 overflow-y-auto scrollbar-thin">
             <!-- Logo -->
             <a href="{{ route('home') }}" class="flex items-center gap-2 px-3 mb-8 select-none">
-                <span class="text-2xl font-black bg-gradient-to-r from-violet-500 to-fuchsia-500 bg-clip-text text-transparent tracking-wider">CINEMOVIE</span>
+                <span class="text-2xl font-black bg-gradient-to-r from-violet-500 to-fuchsia-500 bg-clip-text text-transparent tracking-wider">ENGORA</span>
                 <span class="px-1.5 py-0.5 text-[10px] font-bold bg-violet-600/30 text-violet-400 rounded-md border border-violet-500/20">PRO</span>
             </a>
 
@@ -142,7 +142,7 @@
             <!-- Mobile Top Bar (Hidden on desktop) -->
             <header class="md:hidden sticky top-0 flex items-center justify-between px-6 py-4 bg-[#0B0B14]/80 backdrop-blur-md border-b border-[#1E1E2E] z-40 select-none">
                 <a href="{{ route('home') }}" class="flex items-center gap-2">
-                    <span class="text-xl font-black bg-gradient-to-r from-violet-500 to-fuchsia-500 bg-clip-text text-transparent tracking-wider">CINEMOVIE</span>
+                    <span class="text-xl font-black bg-gradient-to-r from-violet-500 to-fuchsia-500 bg-clip-text text-transparent tracking-wider">ENGORA</span>
                 </a>
                 <div class="flex items-center gap-3">
                     <a href="{{ route('search') }}" class="text-slate-300 hover:text-white transition">

@@ -119,6 +119,8 @@ class SettingsController extends Controller
             }
         }
 
+        \Illuminate\Support\Facades\Cache::forget('api_config_settings');
+
         return $this->index();
     }
 
@@ -136,6 +138,8 @@ class SettingsController extends Controller
         foreach ($placements as $p) {
             Setting::setValue("enable_ad_$p", true, 'boolean');
         }
+
+        \Illuminate\Support\Facades\Cache::forget('api_config_settings');
 
         return response()->json([
             'message' => 'All ads enabled',
@@ -158,6 +162,8 @@ class SettingsController extends Controller
             Setting::setValue("enable_ad_$p", false, 'boolean');
         }
 
+        \Illuminate\Support\Facades\Cache::forget('api_config_settings');
+
         return response()->json([
             'message' => 'All ads disabled',
             'settings' => $this->buildSettingsResponse(),
@@ -167,6 +173,7 @@ class SettingsController extends Controller
     public function setSafeReviewMode()
     {
         Setting::setValue('app_mode', Setting::APP_MODE_SAFE_REVIEW, 'string');
+        \Illuminate\Support\Facades\Cache::forget('api_config_settings');
 
         return response()->json([
             'message' => 'App set to Safe Review Mode',
@@ -177,6 +184,7 @@ class SettingsController extends Controller
     public function setLiveMode()
     {
         Setting::setValue('app_mode', Setting::APP_MODE_LIVE, 'string');
+        \Illuminate\Support\Facades\Cache::forget('api_config_settings');
 
         return response()->json([
             'message' => 'App set to Live Mode',

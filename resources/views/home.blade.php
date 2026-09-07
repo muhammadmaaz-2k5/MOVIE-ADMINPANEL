@@ -1,6 +1,6 @@
 @extends('layouts.layout')
 
-@section('title', 'CineMovie — Stream Movies & TV Shows')
+@section('title', 'ENGORA — Stream Movies & TV Shows')
 
 @section('content')
 <div class="px-4 md:px-8 py-6 space-y-8 max-w-7xl mx-auto select-none" id="home-view">
@@ -89,14 +89,23 @@
     const cacheData = {};
     const customExclusivesCache = {};
 
-    let categories = [];
+    const defaultCategories = [
+        { id: 1, label: 'All', emoji: '🌐', mediaType: 'all', trendingParams: {}, popularParams: {} },
+        { id: 2, label: 'Hollywood', emoji: '🇺🇸', mediaType: 'movie', trendingParams: { with_original_language: 'en' }, popularParams: { with_original_language: 'en' } },
+        { id: 3, label: 'Bollywood', emoji: '🇮🇳', mediaType: 'movie', trendingParams: { with_original_language: 'hi' }, popularParams: { with_original_language: 'hi' } },
+        { id: 4, label: 'Anime', emoji: '🇯🇵', mediaType: 'tv', trendingParams: { with_genres: '16', with_original_language: 'ja' }, popularParams: { with_genres: '16', with_original_language: 'ja' } }
+    ];
+
+    let categories = [...defaultCategories];
     let currentCategory = 0;
     let featuredList = [];
     let currentSlide = 0;
     let slideInterval;
 
     document.addEventListener("DOMContentLoaded", async () => {
-        fetchCategories();
+        renderCategoryChips();
+        loadAllData(0);
+        await fetchCategories();
         await loadHomeSections();
         loadCustomExclusives(0);
         loadAdditionalSections(0);
@@ -104,20 +113,25 @@
 
     async function loadHomeSections() {
         try {
-            const res = await fetch('/api/config/home-sections');
-            homeSections = await res.json();
+            const res = await fetch('/api/config/home-sections?_t=' + Date.now(), { cache: 'no-cache' });
+            const data = await res.json();
+            if (Array.isArray(data) && data.length > 0) {
+                homeSections = data;
+                loadAdditionalSections(currentCategory);
+            }
         } catch (err) {
             console.error("Error loading home sections configuration:", err);
-            homeSections = [];
         }
     }
 
     async function fetchCategories() {
         try {
-            const res = await fetch('/api/config/categories');
-            categories = await res.json();
-            renderCategoryChips();
-            loadAllData(0); // load 'All' initially
+            const res = await fetch('/api/config/categories?_t=' + Date.now(), { cache: 'no-cache' });
+            const data = await res.json();
+            if (Array.isArray(data) && data.length > 0) {
+                categories = data;
+                renderCategoryChips();
+            }
         } catch (err) {
             console.error("Error loading dynamic categories configuration:", err);
         }
@@ -125,6 +139,7 @@
 
     function renderCategoryChips() {
         const chipsContainer = document.getElementById("category-chips");
+        if (!chipsContainer || !Array.isArray(categories)) return;
         chipsContainer.innerHTML = categories.map((cat, idx) => `
             <button onclick="switchCategory(${idx})" 
                     class="flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-bold border transition duration-250 select-none whitespace-nowrap
@@ -149,7 +164,7 @@
 
         setLoadingState();
         
-        const cat = categories[idx];
+        const cat = (Array.isArray(categories) && categories[idx]) ? categories[idx] : defaultCategories[0];
         const monthStart = getMonthStartDate();
         const monthEnd = getMonthEndDate();
 
@@ -161,7 +176,7 @@
             trendingUrl = '/api/tmdb/trending/all/week';
         } else {
             trendingUrl = `/api/tmdb/discover/${cat.mediaType}`;
-            trendingParams = { ...trendingParams, ...cat.trendingParams, sort_by: 'popularity.desc', include_adult: false };
+            trendingParams = { ...trendingParams, ...(cat.trendingParams || {}), sort_by: 'popularity.desc', include_adult: false };
         }
 
         // 2. Fetch Popular
@@ -170,13 +185,8 @@
             page: 1, 
             sort_by: 'popularity.desc', 
             include_adult: false,
-            ...cat.popularParams 
+            ...(cat.popularParams || {}) 
         };
-        
-        if (cat.mediaType === 'all') {
-            popularParams['release_date.gte'] = monthStart;
-            popularParams['release_date.lte'] = monthEnd;
-        }
 
         try {
             // Fetch custom exclusives for this category first (or in parallel) to merge them
@@ -190,30 +200,33 @@
             const customUrlParams = new URLSearchParams(customParams);
 
             const [trendRes, popRes, customRes] = await Promise.all([
-                fetch(`${trendingUrl}?${new URLSearchParams(trendingParams)}`).then(r => r.json()),
-                fetch(`${popularUrl}?${new URLSearchParams(popularParams)}`).then(r => r.json()),
+                fetch(`${trendingUrl}?${new URLSearchParams(trendingParams)}`).then(r => r.json()).catch(() => ({ results: [] })),
+                fetch(`${popularUrl}?${new URLSearchParams(popularParams)}`).then(r => r.json()).catch(() => ({ results: [] })),
                 fetch(`/api/custom-content?${customUrlParams}`).then(r => r.json()).catch(() => [])
             ]);
 
             let trendingItems = parseItems(trendRes.results || [], cat.mediaType);
             let popularItems = parseItems(popRes.results || [], cat.mediaType);
 
-            // Fallback for popular if date constraints returned sparse list
-            if (cat.mediaType === 'all' && popularItems.length < 4) {
-                delete popularParams['release_date.gte'];
-                delete popularParams['release_date.lte'];
-                const popFallback = await fetch(`${popularUrl}?${new URLSearchParams(popularParams)}`).then(r => r.json());
+            // Fallback for popular if empty
+            if (popularItems.length === 0) {
+                const popFallback = await fetch(`/api/tmdb/discover/movie?page=1&sort_by=popularity.desc`).then(r => r.json()).catch(() => ({ results: [] }));
                 popularItems = parseItems(popFallback.results || [], 'movie');
             }
 
+            // Fallback for trending if empty
+            if (trendingItems.length === 0) {
+                const trendFallback = await fetch(`/api/tmdb/trending/movie/week?page=1`).then(r => r.json()).catch(() => ({ results: [] }));
+                trendingItems = parseItems(trendFallback.results || [], 'movie');
+            }
+
             // --- ALGORITHM: Custom Exclusives Merge & Promotion ---
-            if (customRes && customRes.length > 0) {
-                // Prepend custom exclusives to give them maximum visibility
+            if (Array.isArray(customRes) && customRes.length > 0) {
                 trendingItems = [...customRes, ...trendingItems];
                 popularItems = [...customRes, ...popularItems];
             }
 
-            featuredList = trendingItems.slice(0, 3);
+            featuredList = trendingItems.length > 0 ? trendingItems.slice(0, 5) : popularItems.slice(0, 5);
             renderHeroSlider();
 
             renderTrendingRow(trendingItems);
@@ -228,22 +241,30 @@
 
         } catch (err) {
             console.error("Error loading home page content:", err);
+            // Hide skeletons on error
+            const skeleton = document.getElementById("hero-skeleton");
+            if (skeleton) skeleton.classList.add("hidden");
         }
     }
 
     function switchCategory(idx) {
         if (idx === currentCategory) return;
         
-        // Update active class immediately in UI
-        document.getElementById(`chip-${currentCategory}`).className = "flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-bold border transition duration-250 select-none whitespace-nowrap bg-[#1E1E2E] border-white/5 text-slate-400 hover:text-slate-200 hover:border-white/10";
-        document.getElementById(`chip-${idx}`).className = "flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-bold border transition duration-250 select-none whitespace-nowrap bg-violet-600 border-violet-500 text-white shadow-lg shadow-violet-500/20";
+        const oldChip = document.getElementById(`chip-${currentCategory}`);
+        if (oldChip) oldChip.className = "flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-bold border transition duration-250 select-none whitespace-nowrap bg-[#1E1E2E] border-white/5 text-slate-400 hover:text-slate-200 hover:border-white/10";
+        
+        const newChip = document.getElementById(`chip-${idx}`);
+        if (newChip) newChip.className = "flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-bold border transition duration-250 select-none whitespace-nowrap bg-violet-600 border-violet-500 text-white shadow-lg shadow-violet-500/20";
         
         currentCategory = idx;
 
         // Update titles
-        const cat = categories[idx];
-        document.getElementById("trending-label").innerText = cat.label === 'All' ? 'Trending This Week' : `Trending ${cat.label}s`;
-        document.getElementById("popular-label").innerText = cat.label === 'All' ? 'Popular This Month' : `Popular ${cat.label}s`;
+        const cat = (Array.isArray(categories) && categories[idx]) ? categories[idx] : defaultCategories[0];
+        const trendingLabel = document.getElementById("trending-label");
+        if (trendingLabel) trendingLabel.innerText = cat.label === 'All' ? 'Trending This Week' : `Trending ${cat.label}s`;
+        
+        const popularLabel = document.getElementById("popular-label");
+        if (popularLabel) popularLabel.innerText = cat.label === 'All' ? 'Popular This Month' : `Popular ${cat.label}s`;
 
         loadAllData(idx);
         loadCustomExclusives(idx);
@@ -286,17 +307,19 @@
         const dots = document.getElementById("hero-dots");
         const skeleton = document.getElementById("hero-skeleton");
 
-        if (featuredList.length === 0) return;
+        if (!slider || !dots || featuredList.length === 0) return;
 
-        slider.innerHTML = featuredList.map((item, idx) => `
+        slider.innerHTML = featuredList.map((item, idx) => {
+            const bgImg = item.backdropUrl || item.posterUrl || '';
+            return `
             <div class="absolute inset-0 transition-all duration-700 ease-in-out opacity-0 select-none hero-slide" id="slide-${idx}">
-                <div class="absolute inset-0 bg-cover bg-center" style="background-image: url('https://image.tmdb.org/t/p/w1280${item.backdropUrl ? item.backdropUrl.substring(item.backdropUrl.lastIndexOf('/')) : ''}')"></div>
-                <div class="absolute inset-0 bg-gradient-to-t from-[#0B0B14] via-[#0B0B14]/30 to-transparent"></div>
-                <div class="absolute inset-0 bg-gradient-to-r from-[#0B0B14] via-[#0B0B14]/20 to-transparent"></div>
+                <div class="absolute inset-0 bg-cover bg-center" style="background-image: url('${bgImg}')"></div>
+                <div class="absolute inset-0 bg-gradient-to-t from-[#0B0B14] via-[#0B0B14]/40 to-transparent"></div>
+                <div class="absolute inset-0 bg-gradient-to-r from-[#0B0B14] via-[#0B0B14]/30 to-transparent"></div>
                 
                 <!-- Details -->
-                <div class="absolute bottom-16 left-6 md:left-12 max-w-[90%] md:max-w-[50%] space-y-4">
-                    <span class="px-3 py-1 text-[11px] font-extrabold uppercase bg-violet-600 text-white rounded-md tracking-wider">FEATURED</span>
+                <div class="absolute bottom-16 left-6 md:left-12 max-w-[90%] md:max-w-[55%] space-y-4">
+                    <span class="px-3 py-1 text-[11px] font-extrabold uppercase bg-violet-600 text-white rounded-md tracking-wider shadow-lg shadow-violet-600/30">FEATURED</span>
                     <h1 class="text-2xl md:text-4xl font-extrabold text-white leading-tight drop-shadow-md line-clamp-2">${item.title}</h1>
                     <div class="flex items-center gap-4 text-xs font-bold text-slate-300">
                         <span class="flex items-center gap-1 text-amber-400">
@@ -306,16 +329,17 @@
                         <span>•</span>
                         <span>${item.year}</span>
                         <span>•</span>
-                        <span class="uppercase">${item.type}</span>
+                        <span class="uppercase bg-white/10 px-2 py-0.5 rounded text-[10px] font-extrabold">${item.type}</span>
                     </div>
-                    <p class="hidden md:block text-slate-400 text-[14px] leading-relaxed line-clamp-2">Click to view details, reviews, trailers and full interactive streaming.</p>
-                    <a href="/details/${item.type}/${item.id}" class="inline-flex items-center gap-2 bg-white text-slate-950 font-bold px-6 py-3 rounded-xl hover:bg-slate-200 transition text-[13px] shadow-lg shadow-white/5">
+                    <p class="hidden md:block text-slate-300 text-[14px] leading-relaxed line-clamp-2">Stream the latest HD blockbuster releases, exclusive shows, and trending entertainment instantly.</p>
+                    <a href="/details/${item.type}/${item.id}" class="inline-flex items-center gap-2 bg-white text-slate-950 font-bold px-6 py-3 rounded-xl hover:bg-slate-200 transition text-[13px] shadow-lg shadow-white/10 hover:scale-105 transform duration-200">
                         <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
                         <span>Watch Now</span>
                     </a>
                 </div>
             </div>
-        `).join('');
+            `;
+        }).join('');
 
         dots.innerHTML = featuredList.map((_, idx) => `
             <button onclick="goToSlide(${idx})" class="w-2 h-2 rounded-full transition-all duration-300 ${idx === 0 ? 'bg-violet-500 w-6' : 'bg-slate-600 hover:bg-slate-400'}" id="dot-${idx}"></button>
