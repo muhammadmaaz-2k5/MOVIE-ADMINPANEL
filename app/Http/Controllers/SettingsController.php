@@ -8,7 +8,14 @@ use Illuminate\Http\Request;
 class SettingsController extends Controller
 {
     private const SETTINGS = [
-        'ads_enabled' => ['type' => 'boolean', 'default' => false],
+        'ads_enabled' => ['type' => 'boolean', 'default' => true],
+        'admob_enabled' => ['type' => 'boolean', 'default' => true],
+        'admob_banner_id' => ['type' => 'string', 'default' => 'ca-app-pub-3940256099942544/6300978111'],
+        'admob_interstitial_id' => ['type' => 'string', 'default' => 'ca-app-pub-3940256099942544/1033173712'],
+        'admob_rewarded_id' => ['type' => 'string', 'default' => 'ca-app-pub-3940256099942544/5224354917'],
+        'admob_rewarded_interstitial_id' => ['type' => 'string', 'default' => 'ca-app-pub-3940256099942544/5354046379'],
+        'admob_app_open_id' => ['type' => 'string', 'default' => 'ca-app-pub-3940256099942544/9257395921'],
+        'admob_native_id' => ['type' => 'string', 'default' => 'ca-app-pub-3940256099942544/2247696110'],
         'enable_webview_ads' => ['type' => 'boolean', 'default' => false],
         'webview_ad_url' => ['type' => 'string', 'default' => 'https://nazaarabox.com'],
         'app_mode' => ['type' => 'string', 'default' => Setting::APP_MODE_LIVE],
@@ -68,6 +75,13 @@ class SettingsController extends Controller
     {
         $validated = $request->validate([
             'ads_enabled' => 'nullable|boolean',
+            'admob_enabled' => 'nullable|boolean',
+            'admob_banner_id' => 'nullable|string|max:255',
+            'admob_interstitial_id' => 'nullable|string|max:255',
+            'admob_rewarded_id' => 'nullable|string|max:255',
+            'admob_rewarded_interstitial_id' => 'nullable|string|max:255',
+            'admob_app_open_id' => 'nullable|string|max:255',
+            'admob_native_id' => 'nullable|string|max:255',
             'enable_webview_ads' => 'nullable|boolean',
             'webview_ad_url' => 'nullable|string|max:2048',
             'app_mode' => 'nullable|in:live,safe_review',
@@ -127,6 +141,7 @@ class SettingsController extends Controller
     public function enableAllAds()
     {
         Setting::setValue('ads_enabled', true, 'boolean');
+        Setting::setValue('admob_enabled', true, 'boolean');
         Setting::setValue('enable_webview_ads', true, 'boolean');
         
         $placements = [
@@ -150,6 +165,7 @@ class SettingsController extends Controller
     public function disableAllAds()
     {
         Setting::setValue('ads_enabled', false, 'boolean');
+        Setting::setValue('admob_enabled', false, 'boolean');
         Setting::setValue('enable_webview_ads', false, 'boolean');
         
         $placements = [

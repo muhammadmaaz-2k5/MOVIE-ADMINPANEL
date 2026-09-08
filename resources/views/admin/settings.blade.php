@@ -120,6 +120,42 @@
                     </label>
                 </div>
 
+                <!-- Google AdMob Section -->
+                <div class="p-5 bg-white/2 rounded-2xl border border-white/5 space-y-4">
+                    <div class="flex items-center justify-between gap-4">
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <p class="text-sm font-bold text-white">Google AdMob (Test Ads)</p>
+                                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20">Official Sample Units</span>
+                            </div>
+                            <p class="text-xs text-slate-400 mt-1">Enables official Google test ads for safe testing on production & release builds.</p>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="admob_enabled" class="sr-only peer">
+                            <div class="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500"></div>
+                        </label>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-white/5">
+                        <div class="space-y-1.5">
+                            <label class="text-xs font-semibold text-slate-300">Banner Ad Unit ID</label>
+                            <input type="text" id="admob_banner_id" placeholder="ca-app-pub-3940256099942544/6300978111" class="w-full bg-[#1E1E2E] border border-white/5 text-white text-xs rounded-xl px-3 py-2 font-mono">
+                        </div>
+                        <div class="space-y-1.5">
+                            <label class="text-xs font-semibold text-slate-300">Interstitial Ad Unit ID</label>
+                            <input type="text" id="admob_interstitial_id" placeholder="ca-app-pub-3940256099942544/1033173712" class="w-full bg-[#1E1E2E] border border-white/5 text-white text-xs rounded-xl px-3 py-2 font-mono">
+                        </div>
+                        <div class="space-y-1.5">
+                            <label class="text-xs font-semibold text-slate-300">Rewarded Video Unit ID</label>
+                            <input type="text" id="admob_rewarded_id" placeholder="ca-app-pub-3940256099942544/5224354917" class="w-full bg-[#1E1E2E] border border-white/5 text-white text-xs rounded-xl px-3 py-2 font-mono">
+                        </div>
+                        <div class="space-y-1.5">
+                            <label class="text-xs font-semibold text-slate-300">App Open Unit ID</label>
+                            <input type="text" id="admob_app_open_id" placeholder="ca-app-pub-3940256099942544/9257395921" class="w-full bg-[#1E1E2E] border border-white/5 text-white text-xs rounded-xl px-3 py-2 font-mono">
+                        </div>
+                    </div>
+                </div>
+
                 <!-- WebView Ads Toggle -->
                 <div class="p-5 bg-white/2 rounded-2xl border border-white/5 flex items-center justify-between gap-4">
                     <div>
@@ -317,6 +353,11 @@ function togglePlacementSection() {
 
 function applySettingsToForm(data) {
     document.getElementById('ads_enabled').checked = !!data.ads_enabled;
+    document.getElementById('admob_enabled').checked = data.admob_enabled !== false;
+    document.getElementById('admob_banner_id').value = data.admob_banner_id || 'ca-app-pub-3940256099942544/6300978111';
+    document.getElementById('admob_interstitial_id').value = data.admob_interstitial_id || 'ca-app-pub-3940256099942544/1033173712';
+    document.getElementById('admob_rewarded_id').value = data.admob_rewarded_id || 'ca-app-pub-3940256099942544/5224354917';
+    document.getElementById('admob_app_open_id').value = data.admob_app_open_id || 'ca-app-pub-3940256099942544/9257395921';
     document.getElementById('enable_webview_ads').checked = !!data.enable_webview_ads;
     document.getElementById('webview_ad_url').value = data.webview_ad_url || '';
     const mode = data.app_mode === 'safe_review' ? 'safe_review' : 'live';
@@ -341,11 +382,14 @@ function updateStatusBadge(data) {
     updateAppModeBadge(data);
 
     const badge = document.getElementById('ads-status-badge');
-    if (data.ads_enabled && data.enable_webview_ads) {
+    if (data.ads_enabled && data.admob_enabled) {
+        badge.textContent = 'AdMob Test Ads ON';
+        badge.className = 'px-3 py-1 rounded-full text-xs font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30';
+    } else if (data.ads_enabled && data.enable_webview_ads) {
         badge.textContent = 'All Ads ON';
         badge.className = 'px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30';
     } else if (data.ads_enabled) {
-        badge.textContent = 'Ads ON (WebView OFF)';
+        badge.textContent = 'Ads ON';
         badge.className = 'px-3 py-1 rounded-full text-xs font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30';
     } else {
         badge.textContent = 'All Ads OFF';
@@ -377,6 +421,11 @@ async function saveSettings(e) {
     try {
         const payload = {
             ads_enabled: document.getElementById('ads_enabled').checked,
+            admob_enabled: document.getElementById('admob_enabled').checked,
+            admob_banner_id: document.getElementById('admob_banner_id').value.trim(),
+            admob_interstitial_id: document.getElementById('admob_interstitial_id').value.trim(),
+            admob_rewarded_id: document.getElementById('admob_rewarded_id').value.trim(),
+            admob_app_open_id: document.getElementById('admob_app_open_id').value.trim(),
             enable_webview_ads: document.getElementById('enable_webview_ads').checked,
             webview_ad_url: document.getElementById('webview_ad_url').value.trim(),
             app_mode: document.getElementById('app_mode_safe_review').checked ? 'safe_review' : 'live',
