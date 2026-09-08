@@ -30,6 +30,7 @@ class CategorySeeder extends Seeder
             ['label' => 'French',     'emoji' => '🇫🇷', 'media_type' => 'movie', 'trending_params' => json_encode(['with_original_language' => 'fr', 'sort_by' => 'popularity.desc', 'include_adult' => false]), 'popular_params' => json_encode(['with_original_language' => 'fr', 'sort_by' => 'popularity.desc', 'include_adult' => false])],
             ['label' => 'Tamil',      'emoji' => '🎞️', 'media_type' => 'movie', 'trending_params' => json_encode(['with_original_language' => 'ta', 'sort_by' => 'popularity.desc', 'include_adult' => false]), 'popular_params' => json_encode(['with_original_language' => 'ta', 'sort_by' => 'popularity.desc', 'include_adult' => false])],
             ['label' => 'Telugu',     'emoji' => '🎥', 'media_type' => 'movie', 'trending_params' => json_encode(['with_original_language' => 'te', 'sort_by' => 'popularity.desc', 'include_adult' => false]), 'popular_params' => json_encode(['with_original_language' => 'te', 'sort_by' => 'popularity.desc', 'include_adult' => false])],
+            ['label' => 'Midnight',   'emoji' => '🌙', 'media_type' => 'all',   'trending_params' => json_encode(['with_genres' => '53,27,10749', 'sort_by' => 'popularity.desc', 'include_adult' => true]), 'popular_params' => json_encode(['with_genres' => '53,27,10749', 'sort_by' => 'popularity.desc', 'include_adult' => true])],
         ];
 
         foreach ($categories as $cat) {
