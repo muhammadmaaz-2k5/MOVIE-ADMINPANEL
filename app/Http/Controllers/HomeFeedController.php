@@ -65,11 +65,7 @@ class HomeFeedController extends Controller
         $trendingParams = $currentCategory['trending_params'] ?? [];
         $popularParams = $currentCategory['popular_params'] ?? [];
 
-        // 2. Fetch Featured (Hero Carousel, top 5 trending titles)
-        $featuredRaw = $tmdb->fetch('trending/all/week', ['page' => 1]);
-        $featuredItems = array_slice($featuredRaw['results'] ?? [], 0, 5);
-
-        // 3. Fetch Trending Items for current category
+        // 2. Fetch Trending Items for current category
         if ($mediaType === 'all') {
             $trendingRaw = $tmdb->fetch('trending/all/week', ['page' => 1]);
             $trendingResults = $trendingRaw['results'] ?? [];
@@ -78,6 +74,14 @@ class HomeFeedController extends Controller
             $params = array_merge($trendingParams, ['page' => 1]);
             $trendingRaw = $tmdb->fetch($endpoint, $params);
             $trendingResults = $trendingRaw['results'] ?? [];
+        }
+
+        // 3. Fetch Featured (Hero Carousel)
+        if ($categoryId === 0 || ($currentCategory['id'] ?? 1) === 1) {
+            $featuredRaw = $tmdb->fetch('trending/all/week', ['page' => 1]);
+            $featuredItems = array_slice($featuredRaw['results'] ?? [], 0, 5);
+        } else {
+            $featuredItems = array_slice($trendingResults, 0, 5);
         }
 
         // 4. Fetch Popular Items for current category

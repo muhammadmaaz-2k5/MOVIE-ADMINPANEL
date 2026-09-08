@@ -114,15 +114,8 @@ class TmdbProxyController extends Controller
         $token = env('TMDB_BEARER_TOKEN');
         $baseUrl = 'https://api.themoviedb.org/3';
 
-        // Translate dubbed languages for TMDb to return both Hollywood (en) and original language
-        $langCode = isset($queryParams['with_original_language']) ? $queryParams['with_original_language'] : null;
-        if ($langCode && $langCode !== 'en') {
-            $dubbedCodes = ['hi', 'bn', 'ur', 'pa', 'ta', 'te', 'ml', 'kn', 'ar', 'fr', 'es'];
-            $cleanLang = strtolower(explode('-', $langCode)[0]);
-            if (in_array($cleanLang, $dubbedCodes)) {
-                $queryParams['with_original_language'] = "en|{$cleanLang}";
-            }
-        }
+        // Preserve authentic requested language for categories and language browsing
+        // (Do not force en| which drowned out regional content with English blockbusters)
 
         // Enforce released-only content (no unreleased / upcoming items unless explicitly requested)
         $today = date('Y-m-d');
