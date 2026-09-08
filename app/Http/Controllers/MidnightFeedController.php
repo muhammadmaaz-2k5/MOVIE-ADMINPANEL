@@ -3,19 +3,19 @@
 namespace App\Http\Controllers;
 
 use App\Models\CustomMovie;
+use App\Models\MidnightSection;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\DB;
 
 class MidnightFeedController extends Controller
 {
     /**
      * GET /api/midnight/feed
      *
-     * Delivers the curated 18+ Midnight Nightclub cinema feed:
+     * Delivers the curated 18+ Midnight Nightclub cinema feed dynamically:
      * - Hero featured late-night items
      * - Nightclub sub-category chips
-     * - Dedicated Midnight nightclub sections
+     * - Dedicated dynamic Midnight nightclub sections from database
      */
     public function feed(Request $request, TmdbProxyController $tmdb)
     {
@@ -24,7 +24,7 @@ class MidnightFeedController extends Controller
             // 1. Fetch custom exclusives from database
             $customMovies = CustomMovie::where('is_active', true)
                 ->orderBy('id', 'desc')
-                ->take(8)
+                ->take(10)
                 ->get()
                 ->map(function ($movie) {
                     return [
@@ -44,112 +44,67 @@ class MidnightFeedController extends Controller
                     ];
                 })->values()->toArray();
 
-            // 2. Neon Noir & Crime Thrillers
-            $noirRaw = $tmdb->fetch('discover/movie', [
-                'with_genres' => '80,53',
-                'sort_by' => 'popularity.desc',
-                'page' => 1,
-                'include_adult' => true,
-            ]);
-            $noirItems = array_slice($noirRaw['results'] ?? [], 0, 15);
+            // 2. Fetch all active dynamic Midnight sections configured by Admin
+            $dbSections = MidnightSection::where('is_active', true)
+                ->orderBy('sort_order')
+                ->get();
 
-            // 3. After Hours & Passionate Drama
-            $passionRaw = $tmdb->fetch('discover/movie', [
-                'with_genres' => '10749,18',
-                'sort_by' => 'popularity.desc',
-                'page' => 1,
-                'include_adult' => true,
-            ]);
-            $passionItems = array_slice($passionRaw['results'] ?? [], 0, 15);
-
-            // 4. Midnight Madness & Horror
-            $horrorRaw = $tmdb->fetch('discover/movie', [
-                'with_genres' => '27,96',
-                'sort_by' => 'popularity.desc',
-                'page' => 1,
-                'include_adult' => true,
-            ]);
-            $horrorItems = array_slice($horrorRaw['results'] ?? [], 0, 15);
-
-            // 5. Psychological & Mystery
-            $psychRaw = $tmdb->fetch('discover/movie', [
-                'with_genres' => '96,53',
-                'sort_by' => 'vote_average.desc',
-                'vote_count.gte' => 300,
-                'page' => 1,
-                'include_adult' => true,
-            ]);
-            $psychItems = array_slice($psychRaw['results'] ?? [], 0, 15);
-
-            // 6. Featured Carousel (Top late-night titles)
-            $featured = !empty($customMovies)
-                ? array_merge(array_slice($customMovies, 0, 2), array_slice($noirItems, 0, 3))
-                : array_slice($noirItems, 0, 5);
-
-            // 7. Sub-categories
-            $categories = [
-                ['id' => 0, 'label' => 'All Midnight', 'emoji' => '🍸'],
-                ['id' => 1, 'label' => 'Neon Noir', 'emoji' => '🌙'],
-                ['id' => 2, 'label' => 'After Hours', 'emoji' => '💋'],
-                ['id' => 3, 'label' => 'Midnight Horror', 'emoji' => '💀'],
-                ['id' => 4, 'label' => 'Psychological', 'emoji' => '🔮'],
-                ['id' => 5, 'label' => 'VIP Lounge', 'emoji' => '🍾'],
-            ];
-
-            // 8. Assemble Nightclub Sections
             $sections = [];
+            $allFetchedItems = [];
 
-            if (!empty($customMovies)) {
-                $sections[] = [
-                    'id' => 901,
-                    'emoji' => '🍾',
-                    'title' => 'VIP Nightclub Exclusives',
-                    'tagline' => 'Hand-curated adult late-night streams',
-                    'endpoint' => 'custom',
-                    'media_type' => 'movie',
-                    'items' => $customMovies,
-                ];
+            foreach ($dbSections as $sec) {
+                $endpoint = ltrim($sec->endpoint, '/');
+                $params = $sec->params ?: [];
+                $mediaType = $sec->media_type ?: 'movie';
+
+                if ($endpoint === 'custom') {
+                    // Custom Content Exclusives section
+                    $items = $customMovies;
+                } else {
+                    // Fetch TMDB content dynamically
+                    $queryParams = array_merge([
+                        'page' => 1,
+                        'include_adult' => 'true',
+                    ], $params);
+
+                    $raw = $tmdb->fetch($endpoint, $queryParams);
+                    $items = array_slice($raw['results'] ?? [], 0, 15);
+                }
+
+                if (!empty($items)) {
+                    $sections[] = [
+                        'id' => (int)$sec->id,
+                        'emoji' => $sec->emoji ?: '🍸',
+                        'title' => $sec->title,
+                        'tagline' => $sec->tagline ?: '',
+                        'endpoint' => $endpoint,
+                        'media_type' => $mediaType,
+                        'items' => $items,
+                    ];
+
+                    foreach ($items as $it) {
+                        $allFetchedItems[] = $it;
+                    }
+                }
             }
 
-            $sections[] = [
-                'id' => 902,
-                'emoji' => '🌙',
-                'title' => 'Neon Noir & Nightlife Crime',
-                'tagline' => 'Dark alleys, gritty undergrounds, and midnight heists',
-                'endpoint' => 'discover/movie',
-                'media_type' => 'movie',
-                'items' => $noirItems,
-            ];
+            // 3. Featured Carousel (Top late-night spotlight items)
+            $featured = !empty($customMovies)
+                ? array_merge(array_slice($customMovies, 0, 2), array_slice($allFetchedItems, 0, 3))
+                : array_slice($allFetchedItems, 0, 5);
 
-            $sections[] = [
-                'id' => 903,
-                'emoji' => '💋',
-                'title' => 'After Hours & Passion',
-                'tagline' => 'Intense, sensual, and mature late-night romance',
-                'endpoint' => 'discover/movie',
-                'media_type' => 'movie',
-                'items' => $passionItems,
+            // 4. Sub-categories (Built dynamically from section titles & emojis)
+            $categories = [
+                ['id' => 0, 'label' => 'All Midnight', 'emoji' => '🍸'],
             ];
-
-            $sections[] = [
-                'id' => 904,
-                'emoji' => '💀',
-                'title' => 'Midnight Madness & Horror',
-                'tagline' => 'Sinister chills and screams for the dead of night',
-                'endpoint' => 'discover/movie',
-                'media_type' => 'movie',
-                'items' => $horrorItems,
-            ];
-
-            $sections[] = [
-                'id' => 905,
-                'emoji' => '🔮',
-                'title' => 'Late Night Mindbenders',
-                'tagline' => 'Twisted psychological thrillers that keep you awake',
-                'endpoint' => 'discover/movie',
-                'media_type' => 'movie',
-                'items' => $psychItems,
-            ];
+            foreach ($sections as $index => $sec) {
+                $cleanLabel = preg_replace('/^(VIP\s+|Neon\s+|Late\s+Night\s+)/i', '', $sec['title']);
+                $categories[] = [
+                    'id' => $index + 1,
+                    'label' => mb_substr($cleanLabel, 0, 18),
+                    'emoji' => $sec['emoji'],
+                ];
+            }
 
             return [
                 'title' => 'ENGORA MIDNIGHT',

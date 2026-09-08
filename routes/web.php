@@ -124,6 +124,15 @@ Route::middleware(['web', 'admin.auth'])->group(function () {
         Route::delete('/{id}', [\App\Http\Controllers\HomeSectionController::class, 'destroy']);
     });
 
+    // Midnight 18+ Manager
+    Route::get('/admin/midnight-manager', [\App\Http\Controllers\MidnightSectionController::class, 'managerView'])->name('admin.midnight-manager');
+    Route::prefix('admin/api/midnight-sections')->group(function () {
+        Route::get('/', [\App\Http\Controllers\MidnightSectionController::class, 'index']);
+        Route::post('/', [\App\Http\Controllers\MidnightSectionController::class, 'store']);
+        Route::put('/{id}', [\App\Http\Controllers\MidnightSectionController::class, 'update']);
+        Route::delete('/{id}', [\App\Http\Controllers\MidnightSectionController::class, 'destroy']);
+    });
+
     // Global Settings
     Route::get('/admin/settings', function () { return view('admin.settings'); })->name('admin.settings');
     Route::prefix('admin/api/settings')->group(function () {
