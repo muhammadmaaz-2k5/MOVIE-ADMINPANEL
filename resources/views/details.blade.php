@@ -158,7 +158,6 @@
     @if($isLiveMode)
     <div id="download-modal" class="fixed inset-0 bg-slate-950/85 backdrop-blur-md z-50 flex items-end sm:items-center justify-center hidden select-none" onclick="closeDownloadModal(event)">
         <div id="download-modal-panel" class="w-full max-w-lg bg-[#121220] rounded-t-3xl sm:rounded-3xl border border-white/8 shadow-2xl shadow-slate-950/60 overflow-hidden animate-slideUp">
-    @endif
         <!-- Header -->
         <div class="px-6 pt-6 pb-4 flex justify-between items-start border-b border-white/5">
             <div>
@@ -193,7 +192,8 @@
             </a>
         </div>
     </div>
-    @endif
+</div>
+@endif
     
     @if($isLiveMode)
     <!-- Season Episodes Modal Drawer -->
