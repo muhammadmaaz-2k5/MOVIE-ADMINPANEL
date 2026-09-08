@@ -200,6 +200,70 @@
         </div>
     </div>
 
+    <!-- Admin Security & Credentials -->
+    <div class="glass rounded-3xl overflow-hidden divide-y divide-white/5">
+        <div class="p-6 space-y-6">
+            <div class="flex items-center justify-between gap-4">
+                <div>
+                    <h3 class="text-lg font-extrabold text-white flex items-center gap-2">
+                        <span>🔐</span> Admin Account &amp; Password Security
+                    </h3>
+                    <p class="text-slate-400 text-xs mt-1">Update administrator username and encrypted password with bcrypt verification.</p>
+                </div>
+                <span class="px-3 py-1 rounded-full text-xs font-bold bg-[#E50914]/20 text-[#FF2E3D] border border-[#E50914]/30">
+                    Bcrypt Encrypted
+                </span>
+            </div>
+
+            <form id="credentials-form" onsubmit="saveCredentials(event)" class="space-y-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">Admin Display Name</label>
+                        <input type="text" id="admin_name" value="{{ Auth::user()->name ?? 'Engora Admin' }}" required
+                               class="w-full bg-[#181828]/80 border border-white/10 rounded-2xl px-4 py-3 text-white text-sm focus:outline-none focus:border-[#E50914]">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">Username</label>
+                        <input type="text" id="admin_username" value="{{ Auth::user()->username ?? 'admin' }}" required
+                               class="w-full bg-[#181828]/80 border border-white/10 rounded-2xl px-4 py-3 text-white text-sm focus:outline-none focus:border-[#E50914]">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">Admin Email</label>
+                    <input type="email" id="admin_email" value="{{ Auth::user()->email ?? 'admin@engora.com' }}" required
+                           class="w-full bg-[#181828]/80 border border-white/10 rounded-2xl px-4 py-3 text-white text-sm focus:outline-none focus:border-[#E50914]">
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-white/5">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">New Password (optional)</label>
+                        <input type="password" id="new_password" placeholder="Leave blank to keep current" minlength="8"
+                               class="w-full bg-[#181828]/80 border border-white/10 rounded-2xl px-4 py-3 text-white text-sm focus:outline-none focus:border-[#E50914]">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">Confirm New Password</label>
+                        <input type="password" id="new_password_confirmation" placeholder="Repeat new password" minlength="8"
+                               class="w-full bg-[#181828]/80 border border-white/10 rounded-2xl px-4 py-3 text-white text-sm focus:outline-none focus:border-[#E50914]">
+                    </div>
+                </div>
+
+                <div class="pt-2 border-t border-white/5">
+                    <label class="block text-xs font-bold text-amber-300 uppercase tracking-wider mb-2">Current Password (Required to confirm changes)</label>
+                    <input type="password" id="current_password" required placeholder="Enter current password"
+                           class="w-full bg-[#181828]/80 border border-amber-500/30 rounded-2xl px-4 py-3 text-white text-sm focus:outline-none focus:border-amber-400">
+                </div>
+
+                <div class="flex justify-end pt-2">
+                    <button type="submit" id="btn-save-credentials"
+                            class="inline-flex items-center gap-2 bg-gradient-to-r from-[#E50914] to-[#B81D24] text-white font-bold px-6 py-2.5 rounded-2xl hover:from-[#FF2E3D] hover:to-[#B81D24] transition shadow-lg shadow-[#E50914]/20 text-sm">
+                        Update Credentials
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- API Preview -->
     <div class="glass rounded-3xl overflow-hidden">
         <div class="p-6 space-y-3">
@@ -392,6 +456,74 @@ async function bulkToggle(endpoint, successMsg) {
         showToast(data.message || successMsg);
     } catch (err) {
         showToast(err.message || 'Action failed', 'error');
+    }
+}
+
+async function saveCredentials(e) {
+    e.preventDefault();
+    const btn = document.getElementById('btn-save-credentials');
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = `
+        <svg class="animate-spin w-4 h-4 text-white" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+        </svg>
+        <span>Encrypting & Saving...</span>
+    `;
+
+    const payload = {
+        name: document.getElementById('admin_name').value.trim(),
+        username: document.getElementById('admin_username').value.trim(),
+        email: document.getElementById('admin_email').value.trim(),
+        current_password: document.getElementById('current_password').value,
+    };
+
+    const newPass = document.getElementById('new_password').value;
+    const confirmPass = document.getElementById('new_password_confirmation').value;
+    if (newPass) {
+        if (newPass !== confirmPass) {
+            showToast('New passwords do not match', 'error');
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+            return;
+        }
+        if (newPass.length < 8) {
+            showToast('New password must be at least 8 characters', 'error');
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+            return;
+        }
+        payload.new_password = newPass;
+        payload.new_password_confirmation = confirmPass;
+    }
+
+    try {
+        const res = await fetch('/admin/api/settings/update-credentials', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
+            },
+            body: JSON.stringify(payload),
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+            const errorMsg = data.message || (data.errors ? Object.values(data.errors).flat().join(', ') : 'Failed to update credentials');
+            throw new Error(errorMsg);
+        }
+
+        showToast(data.message || 'Credentials updated and encrypted successfully!');
+        document.getElementById('current_password').value = '';
+        document.getElementById('new_password').value = '';
+        document.getElementById('new_password_confirmation').value = '';
+    } catch (err) {
+        showToast(err.message, 'error');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
     }
 }
 
