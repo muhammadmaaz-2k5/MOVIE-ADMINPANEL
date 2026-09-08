@@ -208,6 +208,36 @@
                 <span class="text-sm font-semibold text-slate-300">Active (listed on client pages)</span>
             </div>
 
+            <!-- Midnight 18+ VIP Toggle Card -->
+            <div class="p-4 rounded-2xl bg-gradient-to-r from-[#FF1A75]/10 via-[#9D4EDD]/10 to-transparent border border-[#FF1A75]/25 space-y-3">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-xl bg-[#FF1A75]/20 border border-[#FF1A75]/30 flex items-center justify-center text-sm">
+                            🌙
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs font-bold text-white uppercase tracking-wider">Include in Midnight 18+</span>
+                                <span class="px-1.5 py-0.5 text-[9px] font-black uppercase rounded bg-[#FF1A75]/20 text-[#FF1A75] border border-[#FF1A75]/30">VIP CLUB</span>
+                            </div>
+                            <p class="text-[11px] text-slate-400">Stream will be featured in the 18+ Midnight Nightclub cinema destination</p>
+                        </div>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input id="form-is-midnight" type="checkbox" onchange="toggleMidnightCategoryField()" class="sr-only peer"/>
+                        <div class="w-10 h-5 bg-[#1E1E2E] border border-white/10 rounded-full peer peer-checked:bg-[#FF1A75] peer-checked:border-[#FF1A75] transition-all after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-5"></div>
+                    </label>
+                </div>
+
+                <!-- Midnight Manual Category Selection -->
+                <div id="midnight-category-container" class="space-y-1.5 hidden pt-2 border-t border-white/5">
+                    <label class="text-xs font-semibold text-[#FF1A75] uppercase tracking-wider">Midnight Manual Category</label>
+                    <select id="form-midnight-section-id" class="w-full bg-[#181826] border border-[#FF1A75]/30 text-white text-xs rounded-xl px-4 py-2.5 focus:outline-none focus:border-[#FF1A75] transition">
+                        <option value="">🍸 General / All Midnight (Featured)</option>
+                    </select>
+                </div>
+            </div>
+
             <!-- Submit Row -->
             <div class="flex gap-3 pt-2">
                 <button type="submit" id="submit-btn" class="flex-1 bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white font-bold py-3 rounded-2xl hover:from-violet-500 hover:to-fuchsia-500 transition shadow-lg shadow-violet-500/20 text-sm">
@@ -308,6 +338,7 @@ let activeMovieTypeForStreams = 'movie';
 // ── Init ──────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
     loadCustomLibrary();
+    loadMidnightCategories();
 });
 
 // ── Load Custom Library ───────────────────────────────────────────────────────
@@ -359,13 +390,23 @@ function renderTable(movies) {
             ? `<span class="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-lg px-2 py-0.5"><span class="w-1.5 h-1.5 bg-emerald-400 rounded-full inline-block"></span>Active</span>`
             : `<span class="inline-flex items-center gap-1 text-[10px] font-bold text-slate-500 bg-white/5 border border-white/5 rounded-lg px-2 py-0.5">Inactive</span>`;
 
+        const midnightBadge = movie.is_midnight
+            ? `<span class="ml-1.5 inline-flex items-center gap-1 px-1.5 py-0.5 text-[9px] font-black uppercase rounded bg-[#FF1A75]/20 text-[#FF1A75] border border-[#FF1A75]/30">🌙 18+ VIP</span>`
+            : '';
+        const midnightCatText = (movie.is_midnight && movie.midnight_section)
+            ? `<span class="text-[10px] text-pink-400/90 font-medium"> · ${movie.midnight_section.emoji || '🍸'} ${movie.midnight_section.title}</span>`
+            : '';
+
         return `<tr class="hover:bg-white/1 transition group">
             <td class="px-5 py-3.5">
                 <div class="flex items-center gap-3">
                     <img src="${poster}" class="w-8 h-11 rounded-lg object-cover bg-[#1E1E2E] flex-shrink-0"/>
                     <div class="min-w-0">
-                        <a href="/details/custom/${movie.id}" target="_blank" class="text-xs font-bold text-white hover:text-violet-400 transition line-clamp-1">${movie.title}</a>
-                        <p class="text-[10px] text-slate-500 mt-0.5">TMDB ID: ${movie.tmdb_id} · Year: ${movie.year || '—'}</p>
+                        <div class="flex items-center flex-wrap gap-1">
+                            <a href="/details/custom/${movie.id}" target="_blank" class="text-xs font-bold text-white hover:text-violet-400 transition line-clamp-1">${movie.title}</a>
+                            ${midnightBadge}
+                        </div>
+                        <p class="text-[10px] text-slate-500 mt-0.5">TMDB ID: ${movie.tmdb_id} · Year: ${movie.year || '—'}${midnightCatText}</p>
                     </div>
                 </div>
             </td>
@@ -468,6 +509,32 @@ function selectTmdbContent(c) {
     document.getElementById('tmdb-search').value = '';
 }
 
+// ── Midnight Helpers ─────────────────────────────────────────────────────────
+let midnightCategoriesData = [];
+async function loadMidnightCategories() {
+    try {
+        const res = await fetch('/admin/api/midnight-sections');
+        midnightCategoriesData = await res.json();
+        const sel = document.getElementById('form-midnight-section-id');
+        if (sel) {
+            sel.innerHTML = '<option value="">🍸 General / All Midnight (Featured)</option>' +
+                midnightCategoriesData.map(c => `<option value="${c.id}">${c.emoji || '🍸'} ${c.title}</option>`).join('');
+        }
+    } catch(e) {
+        console.error('Failed to load midnight categories', e);
+    }
+}
+
+function toggleMidnightCategoryField() {
+    const isChecked = document.getElementById('form-is-midnight').checked;
+    const container = document.getElementById('midnight-category-container');
+    if (isChecked) {
+        container.classList.remove('hidden');
+    } else {
+        container.classList.add('hidden');
+    }
+}
+
 // ── Modals Logic ──────────────────────────────────────────────────────────────
 function openAddModal() {
     document.getElementById('modal-title').innerText = 'Create Custom Movie';
@@ -475,6 +542,9 @@ function openAddModal() {
     document.getElementById('form-id').value = '';
     document.getElementById('form-genre-ids').value = '[]';
     document.getElementById('form-is-active').checked = true;
+    document.getElementById('form-is-midnight').checked = false;
+    document.getElementById('form-midnight-section-id').value = '';
+    toggleMidnightCategoryField();
     document.getElementById('tmdb-search-section').classList.remove('hidden');
     document.getElementById('movie-modal').classList.remove('hidden');
     document.body.style.overflow = 'hidden';
@@ -498,6 +568,10 @@ function openEditModal(movie) {
     document.getElementById('form-genre-ids').value     = JSON.stringify(movie.genre_ids || []);
     document.getElementById('form-is-active').checked   = !!movie.is_active;
 
+    document.getElementById('form-is-midnight').checked = !!movie.is_midnight;
+    document.getElementById('form-midnight-section-id').value = movie.midnight_section_id || '';
+    toggleMidnightCategoryField();
+
     document.getElementById('movie-modal').classList.remove('hidden');
     document.body.style.overflow = 'hidden';
 }
@@ -514,18 +588,20 @@ async function submitMovieForm(event) {
 
     const id = document.getElementById('form-id').value;
     const payload = {
-        tmdb_id:       parseInt(document.getElementById('form-tmdb-id').value),
-        title:         document.getElementById('form-title').value,
-        type:          document.getElementById('form-type').value,
-        genre_ids:     JSON.parse(document.getElementById('form-genre-ids').value || '[]'),
-        poster_path:   document.getElementById('form-poster-path').value,
-        backdrop_path: document.getElementById('form-backdrop-path').value,
-        language:      document.getElementById('form-language').value,
-        year:          document.getElementById('form-year').value,
-        runtime:       document.getElementById('form-runtime').value,
-        rating:        parseFloat(document.getElementById('form-rating').value || 0.0),
-        overview:      document.getElementById('form-overview').value,
-        is_active:     document.getElementById('form-is-active').checked,
+        tmdb_id:              parseInt(document.getElementById('form-tmdb-id').value),
+        title:                document.getElementById('form-title').value,
+        type:                 document.getElementById('form-type').value,
+        genre_ids:            JSON.parse(document.getElementById('form-genre-ids').value || '[]'),
+        poster_path:          document.getElementById('form-poster-path').value,
+        backdrop_path:        document.getElementById('form-backdrop-path').value,
+        language:             document.getElementById('form-language').value,
+        year:                 document.getElementById('form-year').value,
+        runtime:              document.getElementById('form-runtime').value,
+        rating:               parseFloat(document.getElementById('form-rating').value || 0.0),
+        overview:             document.getElementById('form-overview').value,
+        is_active:            document.getElementById('form-is-active').checked,
+        is_midnight:          document.getElementById('form-is-midnight').checked,
+        midnight_section_id:  document.getElementById('form-midnight-section-id').value || null,
     };
 
     const btn = document.getElementById('submit-btn');

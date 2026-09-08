@@ -24,4 +24,9 @@ class MidnightSection extends Model
         'is_active' => 'boolean',
         'sort_order' => 'integer',
     ];
+
+    public function customMovies()
+    {
+        return $this->hasMany(CustomMovie::class, 'midnight_section_id');
+    }
 }

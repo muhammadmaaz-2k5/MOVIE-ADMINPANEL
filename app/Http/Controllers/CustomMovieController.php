@@ -184,7 +184,7 @@ class CustomMovieController extends Controller
     /** GET /admin/api/custom-movies — list custom movies for dashboard */
     public function adminIndex(Request $request)
     {
-        $query = CustomMovie::withCount('streams');
+        $query = CustomMovie::with(['midnightSection'])->withCount('streams');
 
         if ($search = $request->query('search')) {
             $query->where('title', 'like', "%{$search}%");
@@ -195,6 +195,12 @@ class CustomMovieController extends Controller
         if ($genre = $request->query('genre')) {
             $query->whereJsonContains('genre_ids', (int)$genre);
         }
+        if ($request->has('is_midnight')) {
+            $query->where('is_midnight', filter_var($request->query('is_midnight'), FILTER_VALIDATE_BOOLEAN));
+        }
+        if ($secId = $request->query('midnight_section_id')) {
+            $query->where('midnight_section_id', $secId);
+        }
 
         $movies = $query->orderByDesc('updated_at')->paginate(20);
         return response()->json($movies);
@@ -204,21 +210,30 @@ class CustomMovieController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'tmdb_id'       => 'required|integer',
-            'title'         => 'required|string|max:255',
-            'type'          => 'required|in:movie,tv',
-            'genre_ids'     => 'nullable|array',
-            'poster_path'   => 'nullable|string|max:255',
-            'backdrop_path' => 'nullable|string|max:255',
-            'overview'      => 'nullable|string',
-            'language'      => 'nullable|string|max:100',
-            'rating'        => 'nullable|numeric',
-            'year'          => 'nullable|string|max:10',
-            'runtime'       => 'nullable|string|max:20',
-            'is_active'     => 'boolean'
+            'tmdb_id'              => 'required|integer',
+            'title'                => 'required|string|max:255',
+            'type'                 => 'required|in:movie,tv',
+            'genre_ids'            => 'nullable|array',
+            'poster_path'          => 'nullable|string|max:255',
+            'backdrop_path'        => 'nullable|string|max:255',
+            'overview'             => 'nullable|string',
+            'language'             => 'nullable|string|max:100',
+            'rating'               => 'nullable|numeric',
+            'year'                 => 'nullable|string|max:10',
+            'runtime'              => 'nullable|string|max:20',
+            'is_active'            => 'boolean',
+            'is_midnight'          => 'nullable|boolean',
+            'midnight_section_id'  => 'nullable',
         ]);
 
+        if (empty($validated['midnight_section_id'])) {
+            $validated['midnight_section_id'] = null;
+        }
+
         $movie = CustomMovie::create($validated);
+        if (!empty($validated['is_midnight'])) {
+            MidnightSectionController::clearMidnightCaches();
+        }
         return response()->json($movie, 201);
     }
 
@@ -228,26 +243,39 @@ class CustomMovieController extends Controller
         $movie = CustomMovie::findOrFail($id);
 
         $validated = $request->validate([
-            'title'         => 'sometimes|required|string|max:255',
-            'genre_ids'     => 'nullable|array',
-            'poster_path'   => 'nullable|string|max:255',
-            'backdrop_path' => 'nullable|string|max:255',
-            'overview'      => 'nullable|string',
-            'language'      => 'nullable|string|max:100',
-            'rating'        => 'nullable|numeric',
-            'year'          => 'nullable|string|max:10',
-            'runtime'       => 'nullable|string|max:20',
-            'is_active'     => 'boolean'
+            'title'                => 'sometimes|required|string|max:255',
+            'type'                 => 'nullable|in:movie,tv',
+            'genre_ids'            => 'nullable|array',
+            'poster_path'          => 'nullable|string|max:255',
+            'backdrop_path'        => 'nullable|string|max:255',
+            'overview'             => 'nullable|string',
+            'language'             => 'nullable|string|max:100',
+            'rating'               => 'nullable|numeric',
+            'year'                 => 'nullable|string|max:10',
+            'runtime'              => 'nullable|string|max:20',
+            'is_active'            => 'boolean',
+            'is_midnight'          => 'nullable|boolean',
+            'midnight_section_id'  => 'nullable',
         ]);
 
+        if (array_key_exists('midnight_section_id', $validated) && empty($validated['midnight_section_id'])) {
+            $validated['midnight_section_id'] = null;
+        }
+
         $movie->update($validated);
+        MidnightSectionController::clearMidnightCaches();
         return response()->json($movie);
     }
 
     /** DELETE /admin/api/custom-movies/{id} */
     public function destroy(int $id)
     {
-        CustomMovie::findOrFail($id)->delete();
+        $movie = CustomMovie::findOrFail($id);
+        $wasMidnight = $movie->is_midnight;
+        $movie->delete();
+        if ($wasMidnight) {
+            MidnightSectionController::clearMidnightCaches();
+        }
         return response()->json(['success' => true]);
     }
 

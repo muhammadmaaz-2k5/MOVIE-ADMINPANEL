@@ -132,6 +132,11 @@ Route::middleware(['web', 'admin.auth'])->group(function () {
         Route::put('/{id}', [\App\Http\Controllers\MidnightSectionController::class, 'update']);
         Route::delete('/{id}', [\App\Http\Controllers\MidnightSectionController::class, 'destroy']);
     });
+    Route::prefix('admin/api/midnight-content')->group(function () {
+        Route::get('/', [\App\Http\Controllers\MidnightSectionController::class, 'content']);
+        Route::post('/toggle/{id}', [\App\Http\Controllers\MidnightSectionController::class, 'toggleContent']);
+        Route::get('/search-available', [\App\Http\Controllers\MidnightSectionController::class, 'searchAvailable']);
+    });
 
     // Global Settings
     Route::get('/admin/settings', function () { return view('admin.settings'); })->name('admin.settings');
