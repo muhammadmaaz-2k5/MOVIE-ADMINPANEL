@@ -73,15 +73,6 @@
                     <button onclick="toggleFavorite()" id="favorite-btn" class="p-3.5 rounded-2xl bg-[#1E1E2E] border border-white/5 hover:border-violet-500/20 hover:text-rose-500 transition duration-200 text-slate-300">
                         <svg id="fav-icon" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg>
                     </button>
-
-                    @if($isLiveMode)
-                    <button id="download-btn" onclick="openDownloadModal()" class="inline-flex items-center gap-2 bg-[#1E1E2E] border border-white/5 text-slate-300 font-extrabold px-6 py-3.5 rounded-2xl hover:bg-white/5 hover:text-white hover:border-violet-500/20 transition duration-200 text-sm">
-                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                        </svg>
-                        <span>Download Links</span>
-                    </button>
-                    @endif
                 </div>
             </div>
         </div>
