@@ -96,6 +96,9 @@ Route::get('/api/custom-movie/{id}', [\App\Http\Controllers\CustomMovieControlle
 // Download Links Public API
 Route::get('/api/download-links/{type}/{id}', [DownloadLinkController::class, 'index']);
 
+// Promoted More Apps Public API
+Route::get('/api/more-apps', [\App\Http\Controllers\PromotedAppController::class, 'publicIndex']);
+
 /*
 |--------------------------------------------------------------------------
 | Admin Authentication Routes (Public Login & Secure Logout)
@@ -194,5 +197,16 @@ Route::middleware(['web', 'admin.auth'])->group(function () {
         Route::post('/',             [DownloadLinkController::class, 'store']);
         Route::put('/{id}',          [DownloadLinkController::class, 'update']);
         Route::delete('/{id}',       [DownloadLinkController::class, 'destroy']);
+    });
+
+    // Promoted Apps Admin Management
+    Route::get('/admin/promoted-apps', [\App\Http\Controllers\PromotedAppController::class, 'managerView'])->name('admin.promoted-apps');
+    Route::prefix('admin/api/promoted-apps')->group(function () {
+        Route::get('/',                    [\App\Http\Controllers\PromotedAppController::class, 'adminIndex']);
+        Route::post('/',                   [\App\Http\Controllers\PromotedAppController::class, 'store']);
+        Route::put('/{id}',                [\App\Http\Controllers\PromotedAppController::class, 'update']);
+        Route::delete('/{id}',             [\App\Http\Controllers\PromotedAppController::class, 'destroy']);
+        Route::post('/{id}/toggle-status',   [\App\Http\Controllers\PromotedAppController::class, 'toggleStatus']);
+        Route::post('/{id}/toggle-featured', [\App\Http\Controllers\PromotedAppController::class, 'toggleFeatured']);
     });
 });
