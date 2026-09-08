@@ -32,7 +32,15 @@ class CustomMovieController extends Controller
             $query->orderBy('sort_order')->orderBy('server_name');
         }])->findOrFail($id);
 
-        return response()->json($movie);
+        $data = $movie->toArray();
+        $data['posterUrl'] = $movie->poster_path;
+        $data['poster_url'] = $movie->poster_path;
+        $data['backdropUrl'] = $movie->backdrop_path;
+        $data['backdrop_url'] = $movie->backdrop_path;
+        $data['description'] = $movie->overview;
+        $data['release_date'] = $movie->year ? "{$movie->year}-01-01" : null;
+
+        return response()->json($data);
     }
 
     public function publicIndex(Request $request)
