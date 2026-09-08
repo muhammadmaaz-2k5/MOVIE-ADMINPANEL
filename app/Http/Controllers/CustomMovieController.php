@@ -218,7 +218,7 @@ class CustomMovieController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'tmdb_id'              => 'required|integer',
+            'tmdb_id'              => 'nullable|integer',
             'title'                => 'required|string|max:255',
             'type'                 => 'required|in:movie,tv',
             'genre_ids'            => 'nullable|array',
@@ -233,6 +233,10 @@ class CustomMovieController extends Controller
             'is_midnight'          => 'nullable|boolean',
             'midnight_section_id'  => 'nullable',
         ]);
+
+        if (empty($validated['tmdb_id'])) {
+            $validated['tmdb_id'] = null;
+        }
 
         if (empty($validated['midnight_section_id'])) {
             $validated['midnight_section_id'] = null;
@@ -251,6 +255,7 @@ class CustomMovieController extends Controller
         $movie = CustomMovie::findOrFail($id);
 
         $validated = $request->validate([
+            'tmdb_id'              => 'nullable|integer',
             'title'                => 'sometimes|required|string|max:255',
             'type'                 => 'nullable|in:movie,tv',
             'genre_ids'            => 'nullable|array',
@@ -265,6 +270,10 @@ class CustomMovieController extends Controller
             'is_midnight'          => 'nullable|boolean',
             'midnight_section_id'  => 'nullable',
         ]);
+
+        if (array_key_exists('tmdb_id', $validated) && empty($validated['tmdb_id'])) {
+            $validated['tmdb_id'] = null;
+        }
 
         if (array_key_exists('midnight_section_id', $validated) && empty($validated['midnight_section_id'])) {
             $validated['midnight_section_id'] = null;

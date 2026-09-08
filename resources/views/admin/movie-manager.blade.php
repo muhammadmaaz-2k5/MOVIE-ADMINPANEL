@@ -122,8 +122,8 @@
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <!-- TMDB ID -->
                 <div class="space-y-1.5">
-                    <label class="text-xs font-semibold text-slate-400 uppercase tracking-wider">TMDB ID *</label>
-                    <input id="form-tmdb-id" type="number" required placeholder="e.g. 693134" class="w-full bg-[#1E1E2E] border border-white/5 text-white text-sm rounded-xl px-4 py-2.5 focus:outline-none focus:border-violet-500/40 transition"/>
+                    <label class="text-xs font-semibold text-slate-400 uppercase tracking-wider">TMDB ID <span class="text-slate-500 font-normal lowercase">(optional)</span></label>
+                    <input id="form-tmdb-id" type="number" placeholder="e.g. 693134 (optional)" class="w-full bg-[#1E1E2E] border border-white/5 text-white text-sm rounded-xl px-4 py-2.5 focus:outline-none focus:border-violet-500/40 transition"/>
                 </div>
 
                 <!-- Content Type -->
@@ -406,7 +406,7 @@ function renderTable(movies) {
                             <a href="/details/custom/${movie.id}" target="_blank" class="text-xs font-bold text-white hover:text-violet-400 transition line-clamp-1">${movie.title}</a>
                             ${midnightBadge}
                         </div>
-                        <p class="text-[10px] text-slate-500 mt-0.5">TMDB ID: ${movie.tmdb_id} · Year: ${movie.year || '—'}${midnightCatText}</p>
+                        <p class="text-[10px] text-slate-500 mt-0.5">${movie.tmdb_id ? 'TMDB: ' + movie.tmdb_id : '<span class="text-violet-400/80 font-medium">Manual Custom</span>'} · Year: ${movie.year || '—'}${midnightCatText}</p>
                     </div>
                 </div>
             </td>
@@ -555,7 +555,7 @@ function openEditModal(movie) {
     document.getElementById('tmdb-search-section').classList.add('hidden');
 
     document.getElementById('form-id').value            = movie.id;
-    document.getElementById('form-tmdb-id').value       = movie.tmdb_id;
+    document.getElementById('form-tmdb-id').value       = movie.tmdb_id || '';
     document.getElementById('form-type').value          = movie.type;
     document.getElementById('form-title').value         = movie.title;
     document.getElementById('form-poster-path').value   = movie.poster_path || '';
@@ -587,8 +587,9 @@ async function submitMovieForm(event) {
     event.preventDefault();
 
     const id = document.getElementById('form-id').value;
+    const rawTmdbId = document.getElementById('form-tmdb-id').value.trim();
     const payload = {
-        tmdb_id:              parseInt(document.getElementById('form-tmdb-id').value),
+        tmdb_id:              rawTmdbId ? parseInt(rawTmdbId) : null,
         title:                document.getElementById('form-title').value,
         type:                 document.getElementById('form-type').value,
         genre_ids:            JSON.parse(document.getElementById('form-genre-ids').value || '[]'),
