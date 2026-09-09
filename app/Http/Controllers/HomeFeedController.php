@@ -109,7 +109,7 @@ class HomeFeedController extends Controller
         }
 
         // 5. Custom content / exclusives
-        $customMovies = CustomMovie::orderBy('id', 'desc')->take(10)->get()->map(function ($movie) {
+        $customMovies = CustomMovie::where('is_active', true)->where('is_midnight', false)->orderBy('id', 'desc')->take(10)->get()->map(function ($movie) {
             return [
                 'id' => 1000000000 + $movie->id,
                 'tmdb_id' => $movie->tmdb_id,

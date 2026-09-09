@@ -241,6 +241,7 @@ class TmdbProxyController extends Controller
 
                 // Fetch matching custom movies from DB
                 $dbQuery = CustomMovie::where('is_active', true)
+                    ->where('is_midnight', false)
                     ->where('title', 'like', "%{$query}%");
                 
                 if ($searchType === 'movie') {
@@ -303,7 +304,9 @@ class TmdbProxyController extends Controller
 
             if ($page === 1) {
                 // Start building DB query
-                $dbQuery = CustomMovie::where('is_active', true)->where('type', $type);
+                $dbQuery = CustomMovie::where('is_active', true)
+                    ->where('is_midnight', false)
+                    ->where('type', $type);
                 $this->applyFilters($dbQuery, $queryParams);
                 $customMovies = $dbQuery->get();
 
@@ -461,6 +464,7 @@ class TmdbProxyController extends Controller
         // Fetch custom override movies for these TMDB IDs
         $overrides = CustomMovie::whereIn('tmdb_id', $tmdbIds)
             ->where('is_active', true)
+            ->where('is_midnight', false)
             ->get()
             ->keyBy('tmdb_id');
 

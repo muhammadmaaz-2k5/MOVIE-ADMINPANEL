@@ -112,16 +112,20 @@
                     </svg>
                     <span>Home Sections</span>
                 </a>
-                <a href="{{ route('admin.midnight-manager') }}" 
-                   class="flex items-center justify-between px-4 py-3 rounded-xl text-[14px] font-semibold transition-all duration-200 {{ request()->routeIs('admin.midnight-manager') ? 'bg-gradient-to-r from-[#FF1A75]/20 to-[#9D4EDD]/20 text-[#FF1A75] border border-[#FF1A75]/40 shadow-lg shadow-[#FF1A75]/10' : 'text-slate-400 hover:text-[#FF1A75] hover:bg-[#1E1E2E]/50' }}">
-                    <div class="flex items-center gap-3">
-                        <svg class="w-5 h-5 text-[#FF1A75]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-                        </svg>
-                        <span>Midnight 18+</span>
-                    </div>
-                    <span class="px-1.5 py-0.5 text-[9px] font-black tracking-wider uppercase rounded bg-[#FF1A75]/20 text-[#FF1A75] border border-[#FF1A75]/30">VIP</span>
-                </a>
+                @auth
+                    @if(!request()->routeIs('home', 'movies', 'tv-shows', 'anime'))
+                    <a href="{{ route('admin.midnight-manager') }}" 
+                       class="flex items-center justify-between px-4 py-3 rounded-xl text-[14px] font-semibold transition-all duration-200 {{ request()->routeIs('admin.midnight-manager') ? 'bg-gradient-to-r from-[#FF1A75]/20 to-[#9D4EDD]/20 text-[#FF1A75] border border-[#FF1A75]/40 shadow-lg shadow-[#FF1A75]/10' : 'text-slate-400 hover:text-[#FF1A75] hover:bg-[#1E1E2E]/50' }}">
+                        <div class="flex items-center gap-3">
+                            <svg class="w-5 h-5 text-[#FF1A75]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                            </svg>
+                            <span>Midnight 18+</span>
+                        </div>
+                        <span class="px-1.5 py-0.5 text-[9px] font-black tracking-wider uppercase rounded bg-[#FF1A75]/20 text-[#FF1A75] border border-[#FF1A75]/30">VIP</span>
+                    </a>
+                    @endif
+                @endauth
                 <a href="{{ route('admin.video-servers') }}" 
                    class="flex items-center gap-3 px-4 py-3 rounded-xl text-[14px] font-semibold transition-all duration-200 {{ request()->routeIs('admin.video-servers') ? 'bg-violet-600/20 text-violet-400 border border-violet-500/20' : 'text-slate-400 hover:text-slate-200 hover:bg-[#1E1E2E]/50' }}">
                     <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">

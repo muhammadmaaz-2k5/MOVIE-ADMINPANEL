@@ -18,9 +18,14 @@ class CustomMovieController extends Controller
             return response()->json([]);
         }
 
-        $movies = CustomMovie::where('is_active', true)
-            ->where('title', 'like', "%{$q}%")
-            ->get();
+        $query = CustomMovie::where('is_active', true);
+        if ($request->has('is_midnight')) {
+            $query->where('is_midnight', filter_var($request->query('is_midnight'), FILTER_VALIDATE_BOOLEAN));
+        } else {
+            $query->where('is_midnight', false);
+        }
+
+        $movies = $query->where('title', 'like', "%{$q}%")->get();
 
         return response()->json($movies);
     }
@@ -46,6 +51,12 @@ class CustomMovieController extends Controller
     public function publicIndex(Request $request)
     {
         $query = CustomMovie::where('is_active', true);
+
+        if ($request->has('is_midnight')) {
+            $query->where('is_midnight', filter_var($request->query('is_midnight'), FILTER_VALIDATE_BOOLEAN));
+        } else {
+            $query->where('is_midnight', false);
+        }
 
         if ($type = $request->query('type')) {
             $query->where('type', $type);
