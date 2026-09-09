@@ -19,7 +19,7 @@ class SettingsController extends Controller
         'enable_ad_app_open' => ['type' => 'boolean', 'default' => true],
         'enable_ad_native' => ['type' => 'boolean', 'default' => true],
         'enable_webview_ads' => ['type' => 'boolean', 'default' => false],
-        'webview_ad_url' => ['type' => 'string', 'default' => 'https://nazaarabox.com'],
+        'webview_ad_url' => ['type' => 'string', 'default' => 'https://thereviewepisode.com'],
         'app_mode' => ['type' => 'string', 'default' => Setting::APP_MODE_LIVE],
         
         'enable_ad_home_banner' => ['type' => 'boolean', 'default' => true],
