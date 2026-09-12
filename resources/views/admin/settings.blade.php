@@ -125,10 +125,10 @@
                     <div class="flex items-center justify-between gap-4">
                         <div>
                             <div class="flex items-center gap-2">
-                                <p class="text-sm font-bold text-white">Google AdMob (Test Ads)</p>
-                                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20">Official Sample Units</span>
+                                <p class="text-sm font-bold text-white">Google AdMob Ads</p>
+                                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20">Remote Control</span>
                             </div>
-                            <p class="text-xs text-slate-400 mt-1">Enables official Google test ads for safe testing on production & release builds.</p>
+                            <p class="text-xs text-slate-400 mt-1">Remotely enable or disable Google AdMob ads in the mobile app without releasing an update.</p>
                         </div>
                         <label class="relative inline-flex items-center cursor-pointer">
                             <input type="checkbox" id="admob_enabled" class="sr-only peer">
@@ -136,27 +136,35 @@
                         </label>
                     </div>
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-white/5">
-                        <div class="space-y-1.5">
-                            <label class="text-xs font-semibold text-slate-300">Banner Ad Unit ID</label>
-                            <input type="text" id="admob_banner_id" placeholder="ca-app-pub-3940256099942544/6300978111" class="w-full bg-[#1E1E2E] border border-white/5 text-white text-xs rounded-xl px-3 py-2 font-mono">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-3 border-t border-white/5">
+                        <div class="p-4 bg-white/2 rounded-xl border border-white/5 flex items-center justify-between gap-4">
+                            <div>
+                                <p class="text-xs font-bold text-white">App Open Ads</p>
+                                <p class="text-[11px] text-slate-400 mt-0.5">Show AdMob ad on app launch & resume</p>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="enable_ad_app_open" class="sr-only peer">
+                                <div class="w-9 h-5 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-amber-500"></div>
+                            </label>
                         </div>
-                        <div class="space-y-1.5">
-                            <label class="text-xs font-semibold text-slate-300">Interstitial Ad Unit ID</label>
-                            <input type="text" id="admob_interstitial_id" placeholder="ca-app-pub-3940256099942544/1033173712" class="w-full bg-[#1E1E2E] border border-white/5 text-white text-xs rounded-xl px-3 py-2 font-mono">
+
+                        <div class="p-4 bg-white/2 rounded-xl border border-white/5 flex items-center justify-between gap-4">
+                            <div>
+                                <p class="text-xs font-bold text-white">Native Medium Ads</p>
+                                <p class="text-[11px] text-slate-400 mt-0.5">Show native ad cards in explore feeds</p>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="enable_ad_native" class="sr-only peer">
+                                <div class="w-9 h-5 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-amber-500"></div>
+                            </label>
                         </div>
-                        <div class="space-y-1.5">
-                            <label class="text-xs font-semibold text-slate-300">Rewarded Video Unit ID</label>
-                            <input type="text" id="admob_rewarded_id" placeholder="ca-app-pub-3940256099942544/5224354917" class="w-full bg-[#1E1E2E] border border-white/5 text-white text-xs rounded-xl px-3 py-2 font-mono">
-                        </div>
-                        <div class="space-y-1.5">
-                            <label class="text-xs font-semibold text-slate-300">App Open Unit ID</label>
-                            <input type="text" id="admob_app_open_id" placeholder="ca-app-pub-3940256099942544/9257395921" class="w-full bg-[#1E1E2E] border border-white/5 text-white text-xs rounded-xl px-3 py-2 font-mono">
-                        </div>
-                        <div class="space-y-1.5">
-                            <label class="text-xs font-semibold text-slate-300">Native Medium Ad Unit ID</label>
-                            <input type="text" id="admob_native_id" placeholder="ca-app-pub-3940256099942544/2247696110" class="w-full bg-[#1E1E2E] border border-white/5 text-white text-xs rounded-xl px-3 py-2 font-mono">
-                        </div>
+                    </div>
+
+                    <div class="p-3 bg-amber-500/5 rounded-xl border border-amber-500/10 flex items-start gap-2.5">
+                        <span class="text-amber-400 text-sm mt-0.5">💡</span>
+                        <p class="text-xs text-slate-400 leading-relaxed">
+                            <strong class="text-amber-300 font-semibold">In-App IDs:</strong> AdMob Ad Unit IDs are embedded directly in the mobile app source for security and store policy compliance. Use the switches above to remotely enable or disable them at any time.
+                        </p>
                     </div>
                 </div>
 
@@ -358,11 +366,10 @@ function togglePlacementSection() {
 function applySettingsToForm(data) {
     document.getElementById('ads_enabled').checked = !!data.ads_enabled;
     document.getElementById('admob_enabled').checked = data.admob_enabled !== false;
-    document.getElementById('admob_banner_id').value = data.admob_banner_id || 'ca-app-pub-3940256099942544/6300978111';
-    document.getElementById('admob_interstitial_id').value = data.admob_interstitial_id || 'ca-app-pub-3940256099942544/1033173712';
-    document.getElementById('admob_rewarded_id').value = data.admob_rewarded_id || 'ca-app-pub-3940256099942544/5224354917';
-    document.getElementById('admob_app_open_id').value = data.admob_app_open_id || 'ca-app-pub-3940256099942544/9257395921';
-    document.getElementById('admob_native_id').value = data.admob_native_id || 'ca-app-pub-3940256099942544/2247696110';
+    const appOpenEl = document.getElementById('enable_ad_app_open');
+    if (appOpenEl) appOpenEl.checked = data.enable_ad_app_open !== false;
+    const nativeEl = document.getElementById('enable_ad_native');
+    if (nativeEl) nativeEl.checked = data.enable_ad_native !== false;
     document.getElementById('enable_webview_ads').checked = !!data.enable_webview_ads;
     document.getElementById('webview_ad_url').value = data.webview_ad_url || '';
     const mode = data.app_mode === 'safe_review' ? 'safe_review' : 'live';
@@ -427,11 +434,8 @@ async function saveSettings(e) {
         const payload = {
             ads_enabled: document.getElementById('ads_enabled').checked,
             admob_enabled: document.getElementById('admob_enabled').checked,
-            admob_banner_id: document.getElementById('admob_banner_id').value.trim(),
-            admob_interstitial_id: document.getElementById('admob_interstitial_id').value.trim(),
-            admob_rewarded_id: document.getElementById('admob_rewarded_id').value.trim(),
-            admob_app_open_id: document.getElementById('admob_app_open_id').value.trim(),
-            admob_native_id: document.getElementById('admob_native_id').value.trim(),
+            enable_ad_app_open: document.getElementById('enable_ad_app_open')?.checked ?? true,
+            enable_ad_native: document.getElementById('enable_ad_native')?.checked ?? true,
             enable_webview_ads: document.getElementById('enable_webview_ads').checked,
             webview_ad_url: document.getElementById('webview_ad_url').value.trim(),
             app_mode: document.getElementById('app_mode_safe_review').checked ? 'safe_review' : 'live',
