@@ -15,6 +15,22 @@ Route::get('/', function () {
     return view('home');
 })->name('home');
 
+Route::get('/privacy', function () {
+    return view('privacy');
+})->name('privacy');
+
+Route::get('/privacy-policy', function () {
+    return view('privacy');
+});
+
+Route::get('/delete-account', function () {
+    return view('privacy');
+})->name('delete-account');
+
+Route::get('/data-deletion', function () {
+    return view('privacy');
+});
+
 Route::get('/movies', function () {
     return view('movies');
 })->name('movies');
