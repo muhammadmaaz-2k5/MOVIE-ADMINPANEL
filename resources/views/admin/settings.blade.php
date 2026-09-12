@@ -153,6 +153,10 @@
                             <label class="text-xs font-semibold text-slate-300">App Open Unit ID</label>
                             <input type="text" id="admob_app_open_id" placeholder="ca-app-pub-3940256099942544/9257395921" class="w-full bg-[#1E1E2E] border border-white/5 text-white text-xs rounded-xl px-3 py-2 font-mono">
                         </div>
+                        <div class="space-y-1.5">
+                            <label class="text-xs font-semibold text-slate-300">Native Medium Ad Unit ID</label>
+                            <input type="text" id="admob_native_id" placeholder="ca-app-pub-3940256099942544/2247696110" class="w-full bg-[#1E1E2E] border border-white/5 text-white text-xs rounded-xl px-3 py-2 font-mono">
+                        </div>
                     </div>
                 </div>
 
@@ -358,6 +362,7 @@ function applySettingsToForm(data) {
     document.getElementById('admob_interstitial_id').value = data.admob_interstitial_id || 'ca-app-pub-3940256099942544/1033173712';
     document.getElementById('admob_rewarded_id').value = data.admob_rewarded_id || 'ca-app-pub-3940256099942544/5224354917';
     document.getElementById('admob_app_open_id').value = data.admob_app_open_id || 'ca-app-pub-3940256099942544/9257395921';
+    document.getElementById('admob_native_id').value = data.admob_native_id || 'ca-app-pub-3940256099942544/2247696110';
     document.getElementById('enable_webview_ads').checked = !!data.enable_webview_ads;
     document.getElementById('webview_ad_url').value = data.webview_ad_url || '';
     const mode = data.app_mode === 'safe_review' ? 'safe_review' : 'live';
@@ -426,6 +431,7 @@ async function saveSettings(e) {
             admob_interstitial_id: document.getElementById('admob_interstitial_id').value.trim(),
             admob_rewarded_id: document.getElementById('admob_rewarded_id').value.trim(),
             admob_app_open_id: document.getElementById('admob_app_open_id').value.trim(),
+            admob_native_id: document.getElementById('admob_native_id').value.trim(),
             enable_webview_ads: document.getElementById('enable_webview_ads').checked,
             webview_ad_url: document.getElementById('webview_ad_url').value.trim(),
             app_mode: document.getElementById('app_mode_safe_review').checked ? 'safe_review' : 'live',
