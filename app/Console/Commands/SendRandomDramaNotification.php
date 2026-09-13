@@ -54,10 +54,11 @@ class SendRandomDramaNotification extends Command
         // 1. Direct custom CLI input
         if ($customTitle && $customBody) {
             $this->comment("📝 Using custom ad-hoc notification parameters.");
+            $customImage = $this->option('image') ?: 'https://image.tmdb.org/t/p/w780/c6BPbkO5Npt1OdwttAxCFo06wtH.jpg';
             $notificationData = [
                 'title'          => $customTitle,
                 'body'           => $customBody,
-                'image_path'     => $this->option('image'),
+                'image_path'     => $customImage,
                 'screen'         => $this->option('screen') ?: 'home',
                 'drama_slug'     => $this->option('drama_slug') ?: '',
                 'episode_number' => $this->option('episode') ?: '',
@@ -218,7 +219,7 @@ class SendRandomDramaNotification extends Command
             [
                 'title'          => '🔥 Trending Today on ENGORA',
                 'body'           => 'Discover the most-watched blockbusters, popular series, and top-rated entertainment right now!',
-                'image_path'     => 'https://image.tmdb.org/t/p/w780/oBIQ5iqRcuTcm8iq23bLI46H22s.jpg',
+                'image_path'     => 'https://image.tmdb.org/t/p/w780/c6BPbkO5Npt1OdwttAxCFo06wtH.jpg',
                 'screen'         => 'home',
                 'drama_slug'     => '',
                 'episode_number' => '',
@@ -228,7 +229,7 @@ class SendRandomDramaNotification extends Command
             [
                 'title'          => '🍿 Movie Night Pick',
                 'body'           => 'Unwind with today\'s handpicked cinematic recommendation with verified ratings & official trailers!',
-                'image_path'     => 'https://image.tmdb.org/t/p/w780/xOMo8BRK7PfcJv9JCnx7s520b4q.jpg',
+                'image_path'     => 'https://image.tmdb.org/t/p/w780/RMXG8myu1aGlNUsRjtxzmpdMK0.jpg',
                 'screen'         => 'home',
                 'drama_slug'     => '',
                 'episode_number' => '',
@@ -238,7 +239,7 @@ class SendRandomDramaNotification extends Command
             [
                 'title'          => '✨ Top Web Series Waiting For You',
                 'body'           => 'Binge the most talked-about drama series and trending episodes on ENGORA today.',
-                'image_path'     => 'https://image.tmdb.org/t/p/w780/7bWxLi59NX5nnURurKV55oFM029.jpg',
+                'image_path'     => 'https://image.tmdb.org/t/p/w780/rZfmzpixLKLR3Hg2u0WgC7XLFl8.jpg',
                 'screen'         => 'home',
                 'drama_slug'     => '',
                 'episode_number' => '',
