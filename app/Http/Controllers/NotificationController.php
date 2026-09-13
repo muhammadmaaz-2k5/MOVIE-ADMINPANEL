@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Cache;
 
 class NotificationController extends Controller
 {
@@ -243,7 +244,10 @@ class NotificationController extends Controller
         }
         
         $credentials = json_decode(file_get_contents($path), true);
-        $projectId = $credentials['project_id'];
+        $projectId = $credentials['project_id'] ?? null;
+        if (!$projectId) {
+            throw new \Exception("Invalid Firebase service account: missing project_id.");
+        }
 
         $accessToken = $this->getAccessToken();
 
@@ -251,27 +255,48 @@ class NotificationController extends Controller
         if ($imageUrl && !str_starts_with($imageUrl, 'http')) {
             $trimmed = ltrim($imageUrl, '/');
             if (str_starts_with($trimmed, 'uploads/')) {
-                $finalImageUrl = url($trimmed);
+                $baseUrl = rtrim(config('app.url', 'https://dashboard.thereviewepisode.com'), '/');
+                $finalImageUrl = $baseUrl . '/' . $trimmed;
             } else {
                 $finalImageUrl = 'https://image.tmdb.org/t/p/w780/' . $trimmed;
             }
         }
 
-        $payload = [
-            'message' => [
-                'topic' => 'all',
-                'data' => [
-                    'title' => (string) $title,
-                    'body' => (string) $body,
-                    'image_url' => (string) ($finalImageUrl ?? ''),
-                    'screen' => (string) ($screen ?? ''),
-                    'drama_slug' => (string) ($dramaSlug ?? ''),
-                    'episode_number' => (string) ($episodeNumber ?? ''),
-                    'item_type' => (string) ($itemType ?? ''),
-                    'tmdb_id' => (string) ($tmdbId ?? ''),
+        $message = [
+            'topic' => 'all',
+            'notification' => [
+                'title' => (string) $title,
+                'body' => (string) $body,
+            ],
+            'data' => [
+                'title' => (string) $title,
+                'body' => (string) $body,
+                'image' => (string) ($finalImageUrl ?? ''),
+                'image_url' => (string) ($finalImageUrl ?? ''),
+                'screen' => (string) ($screen ?? 'home'),
+                'drama_slug' => (string) ($dramaSlug ?? ''),
+                'episode_number' => (string) ($episodeNumber ?? ''),
+                'item_type' => (string) ($itemType ?? 'movie'),
+                'tmdb_id' => (string) ($tmdbId ?? ''),
+            ],
+            'android' => [
+                'priority' => 'HIGH',
+                'notification' => [
+                    'channel_id' => 'general_channel',
+                    'sound' => 'default',
+                    'default_sound' => true,
+                    'default_vibrate_timings' => true,
+                    'notification_priority' => 'PRIORITY_HIGH',
                 ]
             ]
         ];
+
+        if (!empty($finalImageUrl)) {
+            $message['notification']['image'] = (string) $finalImageUrl;
+            $message['android']['notification']['image'] = (string) $finalImageUrl;
+        }
+
+        $payload = ['message' => $message];
 
         $response = Http::withHeaders([
             'Authorization' => 'Bearer ' . $accessToken,
@@ -281,47 +306,51 @@ class NotificationController extends Controller
         if (!$response->successful()) {
             throw new \Exception("FCM API error: " . $response->body());
         }
+
+        return $response->json();
     }
 
     private function getAccessToken()
     {
-        $path = $this->getFirebaseCredentialsPath();
-        if (!file_exists($path)) {
-            throw new \Exception("Firebase service account file not found at $path.");
-        }
-        
-        $credentials = json_decode(file_get_contents($path), true);
-        
-        $header = json_encode(['alg' => 'RS256', 'typ' => 'JWT']);
-        $now = time();
-        $payload = json_encode([
-            'iss' => $credentials['client_email'],
-            'scope' => 'https://www.googleapis.com/auth/firebase.messaging',
-            'aud' => 'https://oauth2.googleapis.com/token',
-            'exp' => $now + 3600,
-            'iat' => $now,
-        ]);
+        return Cache::remember('fcm_v1_access_token', 3300, function () {
+            $path = $this->getFirebaseCredentialsPath();
+            if (!file_exists($path)) {
+                throw new \Exception("Firebase service account file not found at $path.");
+            }
+            
+            $credentials = json_decode(file_get_contents($path), true);
+            
+            $header = json_encode(['alg' => 'RS256', 'typ' => 'JWT']);
+            $now = time();
+            $payload = json_encode([
+                'iss' => $credentials['client_email'],
+                'scope' => 'https://www.googleapis.com/auth/firebase.messaging',
+                'aud' => 'https://oauth2.googleapis.com/token',
+                'exp' => $now + 3600,
+                'iat' => $now,
+            ]);
 
-        $base64UrlHeader = str_replace(['+', '/', '='], ['-', '_', ''], base64_encode($header));
-        $base64UrlPayload = str_replace(['+', '/', '='], ['-', '_', ''], base64_encode($payload));
-        $signatureInput = $base64UrlHeader . "." . $base64UrlPayload;
+            $base64UrlHeader = str_replace(['+', '/', '='], ['-', '_', ''], base64_encode($header));
+            $base64UrlPayload = str_replace(['+', '/', '='], ['-', '_', ''], base64_encode($payload));
+            $signatureInput = $base64UrlHeader . "." . $base64UrlPayload;
 
-        $signature = '';
-        openssl_sign($signatureInput, $signature, $credentials['private_key'], 'sha256WithRSAEncryption');
-        $base64UrlSignature = str_replace(['+', '/', '='], ['-', '_', ''], base64_encode($signature));
-        
-        $jwt = $signatureInput . "." . $base64UrlSignature;
+            $signature = '';
+            openssl_sign($signatureInput, $signature, $credentials['private_key'], 'sha256WithRSAEncryption');
+            $base64UrlSignature = str_replace(['+', '/', '='], ['-', '_', ''], base64_encode($signature));
+            
+            $jwt = $signatureInput . "." . $base64UrlSignature;
 
-        $response = Http::asForm()->post('https://oauth2.googleapis.com/token', [
-            'grant_type' => 'urn:ietf:params:oauth:grant-type:jwt-bearer',
-            'assertion' => $jwt,
-        ]);
+            $response = Http::asForm()->post('https://oauth2.googleapis.com/token', [
+                'grant_type' => 'urn:ietf:params:oauth:grant-type:jwt-bearer',
+                'assertion' => $jwt,
+            ]);
 
-        if ($response->successful()) {
-            return $response->json()['access_token'];
-        }
+            if ($response->successful()) {
+                return $response->json()['access_token'];
+            }
 
-        throw new \Exception("Failed to obtain access token: " . $response->body());
+            throw new \Exception("Failed to obtain access token: " . $response->body());
+        });
     }
 
     private function getFirebaseCredentialsPath()
