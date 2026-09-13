@@ -98,10 +98,11 @@ class SendRandomDramaNotification extends Command
                       ->orWhere('status', '!=', 'disabled');
                 });
 
-                // Prioritize templates never sent, or sent furthest in the past
-                $dbRecord = $query->orderByRaw('sent_at IS NULL DESC, sent_at ASC')
-                                  ->inRandomOrder()
-                                  ->first();
+                // Prioritize templates never sent first, then least-recently sent
+                $dbRecord = (clone $query)->whereNull('sent_at')->inRandomOrder()->first();
+                if (!$dbRecord) {
+                    $dbRecord = $query->orderBy('sent_at', 'asc')->first();
+                }
 
                 if ($dbRecord) {
                     $this->comment("🎲 Selected database template ID #{$dbRecord->id} ('{$dbRecord->title}')");
@@ -111,9 +112,9 @@ class SendRandomDramaNotification extends Command
                 $this->warn("⚠️ Could not query database for templates: " . $e->getMessage());
             }
 
-            // 4. Fallback if no templates exist in database
+            // 4. Dynamic fallback if no templates exist in database
             if (!$notificationData) {
-                $this->warn("⚠️ No active notification templates found in database. Using dynamic fallback template.");
+                $this->comment("🌐 Generating dynamic trending notification from TMDB...");
                 $notificationData = $this->getDynamicFallback($filterType);
             }
         }
@@ -211,10 +212,70 @@ class SendRandomDramaNotification extends Command
     }
 
     /**
-     * Generate engaging fallback content so cron job never fails
+     * Generate engaging dynamic content from TMDB trending or curated fallbacks
      */
     private function getDynamicFallback(?string $type): array
     {
+        $mediaType = $type ?: 'all';
+        $token = env('TMDB_BEARER_TOKEN');
+        $apiKey = env('TMDB_API_KEY');
+
+        // Attempt to fetch fresh daily trending movies/shows from TMDB
+        try {
+            $req = Http::withoutVerifying()->timeout(10);
+            if ($token) {
+                $req->withToken($token);
+            }
+            $url = "https://api.themoviedb.org/3/trending/{$mediaType}/day";
+            if (!$token && $apiKey) {
+                $url .= "?api_key={$apiKey}";
+            }
+
+            $response = $req->get($url);
+            if ($response->successful()) {
+                $results = $response->json()['results'] ?? [];
+                // Filter items that have title and an image
+                $validItems = array_values(array_filter($results, function ($item) {
+                    return (!empty($item['title']) || !empty($item['name'])) &&
+                           (!empty($item['backdrop_path']) || !empty($item['poster_path']));
+                }));
+
+                if (!empty($validItems)) {
+                    $slice = array_slice($validItems, 0, 15);
+                    $selected = $slice[array_rand($slice)];
+
+                    $title = $selected['title'] ?? $selected['name'] ?? 'Trending Pick';
+                    $itemType = $selected['media_type'] ?? ($type ?: 'movie');
+                    $tmdbId = (string)($selected['id'] ?? '');
+                    $imagePath = !empty($selected['backdrop_path'])
+                        ? 'https://image.tmdb.org/t/p/w780' . $selected['backdrop_path']
+                        : 'https://image.tmdb.org/t/p/w780' . $selected['poster_path'];
+
+                    $overview = trim($selected['overview'] ?? '');
+                    if (strlen($overview) > 130) {
+                        $overview = substr($overview, 0, 127) . '...';
+                    }
+
+                    $emojis = ['🔥 Trending Now: ', '🍿 Must Watch: ', '✨ Recommended: ', '⚡ Popular on ENGORA: ', '🎬 Top Pick: '];
+                    $prefix = $emojis[array_rand($emojis)];
+
+                    return [
+                        'title'          => $prefix . $title,
+                        'body'           => $overview ?: "Watch {$title} now streaming on ENGORA with HD quality and fast streaming!",
+                        'image_path'     => $imagePath,
+                        'screen'         => 'home',
+                        'drama_slug'     => '',
+                        'episode_number' => '',
+                        'type'           => $itemType,
+                        'tmdb_id'        => $tmdbId,
+                    ];
+                }
+            }
+        } catch (\Exception $e) {
+            $this->warn("⚠️ TMDB dynamic fetch notice: " . $e->getMessage());
+        }
+
+        // Curated static fallback pool if TMDB API is offline or unreachable
         $fallbacks = [
             [
                 'title'          => '🔥 Trending Today on ENGORA',
@@ -246,8 +307,29 @@ class SendRandomDramaNotification extends Command
                 'type'           => 'tv',
                 'tmdb_id'        => '94997',
             ],
+            [
+                'title'          => '⚡ Action & Thrillers Packed For You',
+                'body'           => 'Get your adrenaline pumping with our hand-picked action movies and gripping suspense thrillers.',
+                'image_path'     => 'https://image.tmdb.org/t/p/w780/xOmOoDJ5q9vFv61fSzaBrQgvm49.jpg',
+                'screen'         => 'home',
+                'drama_slug'     => '',
+                'episode_number' => '',
+                'type'           => 'movie',
+                'tmdb_id'        => '823464',
+            ],
+            [
+                'title'          => '🌟 Weekend Binge Picks',
+                'body'           => 'Looking for something great to watch? Check out top-rated movies and popular series trending now.',
+                'image_path'     => 'https://image.tmdb.org/t/p/w780/yDHYTfA3R0jFYba16jBB1ef8oIt.jpg',
+                'screen'         => 'home',
+                'drama_slug'     => '',
+                'episode_number' => '',
+                'type'           => 'movie',
+                'tmdb_id'        => '533535',
+            ],
         ];
 
         return $fallbacks[array_rand($fallbacks)];
     }
+
 }
