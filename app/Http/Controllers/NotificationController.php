@@ -287,6 +287,8 @@ class NotificationController extends Controller
                     'default_sound' => true,
                     'default_vibrate_timings' => true,
                     'notification_priority' => 'PRIORITY_HIGH',
+                    'icon' => 'ic_notification',
+                    'color' => '#E50914',
                 ]
             ]
         ];
