@@ -65,6 +65,45 @@ class NotificationController extends Controller
         }
     }
 
+    /** POST /api/fcm/register-token - register active device token */
+    public function registerToken(Request $request)
+    {
+        $token = $request->input('token');
+        if (!$token || !is_string($token)) {
+            return response()->json(['success' => false, 'message' => 'Valid token required'], 422);
+        }
+
+        self::saveRegisteredToken($token);
+        return response()->json(['success' => true, 'message' => 'Device token registered successfully', 'total_registered' => count(self::getRegisteredTokens())]);
+    }
+
+    public static function getRegisteredTokens(): array
+    {
+        $file = storage_path('app/fcm_tokens.json');
+        if (!file_exists($file)) {
+            return [];
+        }
+        $data = json_decode(file_get_contents($file), true);
+        return is_array($data) ? $data : [];
+    }
+
+    public static function saveRegisteredToken(string $token): void
+    {
+        $dir = storage_path('app');
+        if (!is_dir($dir)) {
+            @mkdir($dir, 0755, true);
+        }
+        $file = $dir . '/fcm_tokens.json';
+        $tokens = self::getRegisteredTokens();
+        if (!in_array($token, $tokens)) {
+            $tokens[] = $token;
+            if (count($tokens) > 50) {
+                array_shift($tokens);
+            }
+            @file_put_contents($file, json_encode(array_values($tokens), JSON_PRETTY_PRINT));
+        }
+    }
+
     // ── CRUD for Scheduled Notifications (Separated templates) ────────────────
 
     /** GET /admin/api/scheduled-notifications - list templates */
@@ -236,7 +275,7 @@ class NotificationController extends Controller
 
     // ── FCM & Access Token Helpers ────────────────────────────────────────────
 
-    public function sendFCMNotification($title, $body, $imageUrl = null, $screen = null, $dramaSlug = null, $episodeNumber = null, $itemType = null, $tmdbId = null)
+    public function sendFCMNotification($title, $body, $imageUrl = null, $screen = null, $dramaSlug = null, $episodeNumber = null, $itemType = null, $tmdbId = null, $targetToken = null)
     {
         $path = $this->getFirebaseCredentialsPath();
         if (!file_exists($path)) {
@@ -263,7 +302,6 @@ class NotificationController extends Controller
         }
 
         $message = [
-            'topic' => 'all',
             'notification' => [
                 'title' => (string) $title,
                 'body' => (string) $body,
@@ -292,6 +330,12 @@ class NotificationController extends Controller
                 ]
             ]
         ];
+
+        if (!empty($targetToken)) {
+            $message['token'] = (string) $targetToken;
+        } else {
+            $message['topic'] = 'all';
+        }
 
         if (!empty($finalImageUrl)) {
             $message['notification']['image'] = (string) $finalImageUrl;

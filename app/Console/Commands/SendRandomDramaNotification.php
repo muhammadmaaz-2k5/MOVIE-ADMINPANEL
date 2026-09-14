@@ -25,6 +25,7 @@ class SendRandomDramaNotification extends Command
                             {--drama_slug= : Drama or series slug identifier}
                             {--episode= : Episode number}
                             {--tmdb_id= : Associated TMDB ID for deep-linking}
+                            {--token= : Direct device FCM token (bypasses topic broadcast)}
                             {--dry-run : Simulate and display payload without contacting Firebase}
                             {--force : Force send dynamic fallback if database has no templates}';
 
@@ -119,11 +120,13 @@ class SendRandomDramaNotification extends Command
             }
         }
 
+        $targetToken = $this->option('token');
+
         // Display summary
         $this->table(
             ['Field', 'Value'],
             [
-                ['Target Topic', 'all'],
+                ['Target', $targetToken ? 'Device Token: ' . substr($targetToken, 0, 15) . '...' : 'Topic: all'],
                 ['Title', $notificationData['title']],
                 ['Body', $notificationData['body']],
                 ['Screen', $notificationData['screen'] ?? 'home'],
@@ -150,11 +153,42 @@ class SendRandomDramaNotification extends Command
                 $notificationData['drama_slug'],
                 $notificationData['episode_number'],
                 $notificationData['type'],
-                $notificationData['tmdb_id']
+                $notificationData['tmdb_id'],
+                $targetToken
             );
 
             $messageId = $result['name'] ?? 'Sent';
-            $this->info("🎉 Notification successfully broadcasted to topic 'all'!");
+            if (!empty($targetToken)) {
+                $this->info("🎯 Notification delivered directly to specified device token!");
+                $this->line("<fg=cyan>Target Token: {$targetToken}</>");
+            } else {
+                $this->info("🎉 Notification successfully broadcasted to topic 'all'!");
+                
+                // Also deliver directly to registered test devices for instant 0-second reception
+                $registeredTokens = NotificationController::getRegisteredTokens();
+                if (!empty($registeredTokens)) {
+                    $this->line("⚡ Also dispatching directly to " . count($registeredTokens) . " registered active device(s) to bypass topic propagation delay...");
+                    foreach ($registeredTokens as $idx => $regToken) {
+                        try {
+                            $regResult = $controller->sendFCMNotification(
+                                $notificationData['title'],
+                                $notificationData['body'],
+                                $notificationData['image_path'],
+                                $notificationData['screen'],
+                                $notificationData['drama_slug'],
+                                $notificationData['episode_number'],
+                                $notificationData['type'],
+                                $notificationData['tmdb_id'],
+                                $regToken
+                            );
+                            $regMsgId = $regResult['name'] ?? 'Sent';
+                            $this->line("   ✓ Device #" . ($idx + 1) . " delivered! (" . substr($regToken, 0, 18) . "... ID: " . basename($regMsgId) . ")");
+                        } catch (\Exception $e) {
+                            $this->line("   ✗ Device #" . ($idx + 1) . " failed: " . $e->getMessage());
+                        }
+                    }
+                }
+            }
             $this->line("<fg=cyan>FCM Message ID: {$messageId}</>");
 
             // Update database record if applicable

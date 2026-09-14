@@ -115,6 +115,9 @@ Route::get('/api/download-links/{type}/{id}', [DownloadLinkController::class, 'i
 // Promoted More Apps Public API
 Route::get('/api/more-apps', [\App\Http\Controllers\PromotedAppController::class, 'publicIndex']);
 
+// Device FCM Token Registration API
+Route::post('/api/fcm/register-token', [\App\Http\Controllers\NotificationController::class, 'registerToken']);
+
 /*
 |--------------------------------------------------------------------------
 | Admin Authentication Routes (Public Login & Secure Logout)
