@@ -23,6 +23,7 @@ class DatabaseSeeder extends Seeder
             SettingsSeeder::class,
             MidnightSectionSeeder::class,
             CustomMidnightMovieSeeder::class,
+            CustomContentSeeder::class,
             PromotedAppSeeder::class,
         ]);
     }

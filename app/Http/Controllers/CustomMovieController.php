@@ -27,7 +27,18 @@ class CustomMovieController extends Controller
 
         $movies = $query->where('title', 'like', "%{$q}%")->get();
 
-        return response()->json($movies);
+        $mapped = $movies->map(function($movie) {
+            $genreIds = is_string($movie->genre_ids) ? json_decode($movie->genre_ids, true) : ($movie->genre_ids ?: []);
+            $data = $movie->toArray();
+            $data['is_custom'] = true;
+            $data['custom_id'] = (int)$movie->id;
+            $data['posterUrl'] = $movie->poster_path ? (str_starts_with($movie->poster_path, 'http') ? $movie->poster_path : "https://image.tmdb.org/t/p/w342" . $movie->poster_path) : 'https://placehold.co/342x513/1E1E2E/FFF?text=No+Image';
+            $data['backdropUrl'] = $movie->backdrop_path ? (str_starts_with($movie->backdrop_path, 'http') ? $movie->backdrop_path : "https://image.tmdb.org/t/p/w780" . $movie->backdrop_path) : '';
+            $data['genre_ids'] = $genreIds;
+            return $data;
+        });
+
+        return response()->json($mapped);
     }
 
     /** GET /api/custom-movie/{id} — get details of custom movie + streams */
@@ -38,6 +49,8 @@ class CustomMovieController extends Controller
         }])->findOrFail($id);
 
         $data = $movie->toArray();
+        $data['is_custom'] = true;
+        $data['custom_id'] = (int)$movie->id;
         $data['posterUrl'] = $movie->poster_path;
         $data['poster_url'] = $movie->poster_path;
         $data['backdropUrl'] = $movie->backdrop_path;
@@ -191,7 +204,9 @@ class CustomMovieController extends Controller
                 'rating' => $movie->rating ? (double)$movie->rating : 0.0,
                 'year' => $movie->year,
                 'genre_ids' => $genreIds ?: [],
-                'is_custom' => true
+                'is_custom' => true,
+                'is_midnight' => (bool)$movie->is_midnight,
+                'overview' => $movie->overview ?: ''
             ];
         });
 
@@ -257,6 +272,8 @@ class CustomMovieController extends Controller
         if (!empty($validated['is_midnight'])) {
             MidnightSectionController::clearMidnightCaches();
         }
+        HomeFeedController::clearHomeFeedCaches();
+        ConfigController::clearServersCache();
         return response()->json($movie, 201);
     }
 
@@ -292,6 +309,8 @@ class CustomMovieController extends Controller
 
         $movie->update($validated);
         MidnightSectionController::clearMidnightCaches();
+        HomeFeedController::clearHomeFeedCaches();
+        ConfigController::clearServersCache();
         return response()->json($movie);
     }
 
@@ -304,6 +323,8 @@ class CustomMovieController extends Controller
         if ($wasMidnight) {
             MidnightSectionController::clearMidnightCaches();
         }
+        HomeFeedController::clearHomeFeedCaches();
+        ConfigController::clearServersCache();
         return response()->json(['success' => true]);
     }
 
@@ -333,6 +354,8 @@ class CustomMovieController extends Controller
         $validated['custom_movie_id'] = $id;
 
         $stream = CustomMovieStream::create($validated);
+        HomeFeedController::clearHomeFeedCaches();
+        ConfigController::clearServersCache();
         return response()->json($stream, 201);
     }
 
@@ -351,6 +374,8 @@ class CustomMovieController extends Controller
         ]);
 
         $stream->update($validated);
+        HomeFeedController::clearHomeFeedCaches();
+        ConfigController::clearServersCache();
         return response()->json($stream);
     }
 
@@ -358,6 +383,8 @@ class CustomMovieController extends Controller
     public function destroyStream(int $id)
     {
         CustomMovieStream::findOrFail($id)->delete();
+        HomeFeedController::clearHomeFeedCaches();
+        ConfigController::clearServersCache();
         return response()->json(['success' => true]);
     }
 

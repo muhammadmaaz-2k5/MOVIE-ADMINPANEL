@@ -12,6 +12,13 @@ class HomeFeedController extends Controller
 {
     private const CACHE_TTL = 1800; // 30 minutes
 
+    public static function clearHomeFeedCaches(): void
+    {
+        for ($i = 0; $i <= 30; $i++) {
+            Cache::forget("api_home_feed_{$i}");
+        }
+    }
+
     public function feed(Request $request, TmdbProxyController $tmdb)
     {
         $categoryId = (int)$request->query('category_id', 0);
@@ -108,23 +115,64 @@ class HomeFeedController extends Controller
             $popularResults = $popularRaw['results'] ?? [];
         }
 
-        // 5. Custom content / exclusives
-        $customMovies = CustomMovie::where('is_active', true)->where('is_midnight', false)->orderBy('id', 'desc')->take(10)->get()->map(function ($movie) {
+        // 5. Custom content / exclusives categorized by format
+        $allCustom = CustomMovie::where('is_active', true)
+            ->where('is_midnight', false)
+            ->orderBy('id', 'desc')
+            ->take(60)
+            ->get();
+
+        $mapCustom = function ($movie) {
+            $genreIds = is_string($movie->genre_ids) ? json_decode($movie->genre_ids, true) : ($movie->genre_ids ?: []);
+            $posterPath = $movie->poster_path ?: '';
+            $posterUrl = $posterPath ? (str_starts_with($posterPath, 'http') ? $posterPath : "https://image.tmdb.org/t/p/w342" . (str_starts_with($posterPath, '/') ? $posterPath : "/{$posterPath}")) : '';
+            $backdropPath = $movie->backdrop_path ?: '';
+            $backdropUrl = $backdropPath ? (str_starts_with($backdropPath, 'http') ? $backdropPath : "https://image.tmdb.org/t/p/w780" . (str_starts_with($backdropPath, '/') ? $backdropPath : "/{$backdropPath}")) : '';
+
             return [
                 'id' => 1000000000 + $movie->id,
                 'tmdb_id' => $movie->tmdb_id,
                 'title' => $movie->title,
                 'name' => $movie->title,
-                'overview' => $movie->overview,
-                'poster_path' => $movie->poster_path,
-                'backdrop_path' => $movie->backdrop_path,
+                'overview' => $movie->overview ?: '',
+                'poster_path' => $posterPath,
+                'posterUrl' => $posterUrl,
+                'backdrop_path' => $backdropPath,
+                'backdropUrl' => $backdropUrl,
                 'vote_average' => (float)$movie->rating,
+                'rating' => (float)$movie->rating,
+                'year' => (string)($movie->year ?: ''),
                 'release_date' => $movie->year ? "{$movie->year}-01-01" : null,
                 'media_type' => $movie->type,
+                'type' => $movie->type,
+                'genre_ids' => $genreIds ?: [],
                 'is_custom' => true,
                 'custom_id' => $movie->id,
+                'is_midnight' => false,
+                'is_adult' => false,
+                'adult' => false,
             ];
-        })->values()->toArray();
+        };
+
+        $mustWatchAnime = [];
+        $mustWatchMovies = [];
+        $mustWatchTv = [];
+
+        foreach ($allCustom as $movie) {
+            $genres = is_string($movie->genre_ids) ? json_decode($movie->genre_ids, true) : ($movie->genre_ids ?: []);
+            $isAnime = in_array(16, $genres ?: []) || in_array('16', $genres ?: []) || strtolower($movie->type) === 'anime';
+            $mapped = $mapCustom($movie);
+
+            if ($isAnime) {
+                $mustWatchAnime[] = $mapped;
+            } elseif ($movie->type === 'tv') {
+                $mustWatchTv[] = $mapped;
+            } else {
+                $mustWatchMovies[] = $mapped;
+            }
+        }
+
+        $customMovies = array_map($mapCustom, $allCustom->take(10)->all());
 
         // Inject custom content into trending & popular if appropriate
         if (!empty($customMovies)) {
@@ -147,7 +195,7 @@ class HomeFeedController extends Controller
             ->get();
 
         $sections = $rawSections->map(function ($sec) use ($tmdb) {
-            $params = json_decode($sec->params, true) ?: [];
+            $params = json_decode($sec->params ?: '{}', true) ?: [];
             $endpoint = ltrim($sec->endpoint, '/');
             
             // Fetch top 10 items for this section
@@ -179,6 +227,9 @@ class HomeFeedController extends Controller
             'trending' => array_slice($trendingResults, 0, 20),
             'popular' => array_slice($popularResults, 0, 12),
             'custom_exclusives' => $customMovies,
+            'must_watch_movies' => array_values($mustWatchMovies),
+            'must_watch_tv' => array_values($mustWatchTv),
+            'must_watch_anime' => array_values($mustWatchAnime),
             'sections' => $sections
         ];
     }

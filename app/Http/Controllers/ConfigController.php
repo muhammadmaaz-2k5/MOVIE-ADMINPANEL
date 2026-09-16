@@ -57,16 +57,29 @@ class ConfigController extends Controller
         $id = request()->query('id');
         $season = request()->query('season');
         $episode = request()->query('episode');
+        $type = request()->query('type');
+        $customIdParam = request()->query('custom_id');
+        $isCustom = filter_var(request()->query('is_custom'), FILTER_VALIDATE_BOOLEAN) || $type === 'custom' || !empty($customIdParam);
 
-        $cacheKey = "api_config_servers_{$id}_{$season}_{$episode}";
+        $cacheKey = "api_config_servers_{$id}_{$type}_{$season}_{$episode}_" . ($isCustom ? 'custom' : 'std');
         $isHit = Cache::has($cacheKey);
 
-        $result = Cache::remember($cacheKey, 21600, function () use ($id, $season, $episode) {
+        $result = Cache::remember($cacheKey, 3600, function () use ($id, $season, $episode, $type, $customIdParam, $isCustom) {
             $customMovie = null;
-            if ($id && is_numeric($id)) {
-                if ((int)$id >= 1000000000) {
-                    $customId = (int)$id - 1000000000;
-                    $customMovie = \App\Models\CustomMovie::with('streams')->find($customId);
+
+            if ($customIdParam && is_numeric($customIdParam)) {
+                $customMovie = \App\Models\CustomMovie::with('streams')->find((int)$customIdParam);
+            } elseif ($id && is_numeric($id)) {
+                $numId = (int)$id;
+                if ($numId >= 1000000000) {
+                    $customMovie = \App\Models\CustomMovie::with('streams')->find($numId - 1000000000);
+                } elseif ($isCustom) {
+                    $customMovie = \App\Models\CustomMovie::with('streams')->find($numId);
+                } else {
+                    $maybeCustom = \App\Models\CustomMovie::with('streams')->find($numId);
+                    if ($maybeCustom && $maybeCustom->streams->isNotEmpty()) {
+                        $customMovie = $maybeCustom;
+                    }
                 }
             }
 
@@ -94,7 +107,9 @@ class ConfigController extends Controller
                         'label' => $stream->server_name,
                         'icon' => $stream->server_icon ?: '🔗',
                         'movie_url_template' => $stream->stream_url,
-                        'tv_url_template' => $stream->stream_url
+                        'tv_url_template' => $stream->stream_url,
+                        'stream_url' => $stream->stream_url,
+                        'is_custom' => true,
                     ];
                 })->values()->toArray();
 
@@ -102,18 +117,23 @@ class ConfigController extends Controller
                     return $customServers;
                 }
 
-                return DB::table('video_servers')->get()->map(function($server) use ($customMovie) {
-                    $movieTpl = str_replace('{id}', $customMovie->tmdb_id, $server->movie_url_template);
-                    $tvTpl    = str_replace('{id}', $customMovie->tmdb_id, $server->tv_url_template);
-                    return [
-                        'id' => $server->id,
-                        'name' => $server->name,
-                        'label' => $server->label,
-                        'icon' => $server->icon,
-                        'movie_url_template' => $movieTpl,
-                        'tv_url_template' => $tvTpl
-                    ];
-                })->values()->toArray();
+                if ($customMovie->tmdb_id) {
+                    return DB::table('video_servers')->get()->map(function($server) use ($customMovie) {
+                        $movieTpl = str_replace('{id}', $customMovie->tmdb_id, $server->movie_url_template);
+                        $tvTpl    = str_replace('{id}', $customMovie->tmdb_id, $server->tv_url_template);
+                        return [
+                            'id' => $server->id,
+                            'name' => $server->name,
+                            'label' => $server->label,
+                            'icon' => $server->icon,
+                            'movie_url_template' => $movieTpl,
+                            'tv_url_template' => $tvTpl,
+                            'is_custom' => true,
+                        ];
+                    })->values()->toArray();
+                }
+
+                return [];
             }
 
             return DB::table('video_servers')->get()->values()->toArray();
@@ -121,7 +141,12 @@ class ConfigController extends Controller
 
         return response()->json($result)
             ->header('X-Cache', $isHit ? 'HIT' : 'MISS')
-            ->header('Cache-Control', 'public, max-age=21600');
+            ->header('Cache-Control', 'public, max-age=3600');
+    }
+
+    public static function clearServersCache(): void
+    {
+        Cache::flush();
     }
 
     public function homeSections()
