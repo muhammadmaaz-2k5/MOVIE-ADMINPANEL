@@ -30,6 +30,11 @@ class Setting extends Model
         return static::getAppMode() === self::APP_MODE_SAFE_REVIEW;
     }
 
+    public static function isMidnightOnHomeEnabled(): bool
+    {
+        return (bool) static::getValue('show_midnight_on_home', false);
+    }
+
     public static function getValue(string $key, $default = null)
     {
         $setting = static::where('key', $key)->first();

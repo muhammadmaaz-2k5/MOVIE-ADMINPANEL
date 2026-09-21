@@ -21,6 +21,7 @@ class SettingsController extends Controller
         'enable_webview_ads' => ['type' => 'boolean', 'default' => false],
         'webview_ad_url' => ['type' => 'string', 'default' => 'https://thereviewepisode.com'],
         'app_mode' => ['type' => 'string', 'default' => Setting::APP_MODE_LIVE],
+        'show_midnight_on_home' => ['type' => 'boolean', 'default' => false],
         
         'enable_ad_home_banner' => ['type' => 'boolean', 'default' => true],
         'ad_url_home_banner' => ['type' => 'string', 'default' => ''],
@@ -89,6 +90,7 @@ class SettingsController extends Controller
             'enable_webview_ads' => 'nullable|boolean',
             'webview_ad_url' => 'nullable|string|max:2048',
             'app_mode' => 'nullable|in:live,safe_review',
+            'show_midnight_on_home' => 'nullable|boolean',
             
             'enable_ad_home_banner' => 'nullable|boolean',
             'ad_url_home_banner' => 'nullable|string|max:2048',
@@ -138,6 +140,7 @@ class SettingsController extends Controller
         }
 
         \Illuminate\Support\Facades\Cache::forget('api_config_settings');
+        HomeFeedController::clearHomeFeedCaches();
 
         return $this->index();
     }
@@ -208,6 +211,30 @@ class SettingsController extends Controller
 
         return response()->json([
             'message' => 'App set to Live Mode',
+            'settings' => $this->buildSettingsResponse(),
+        ]);
+    }
+
+    public function enableMidnightOnHome()
+    {
+        Setting::setValue('show_midnight_on_home', true, 'boolean');
+        \Illuminate\Support\Facades\Cache::forget('api_config_settings');
+        HomeFeedController::clearHomeFeedCaches();
+
+        return response()->json([
+            'message' => 'Midnight content enabled on Home page',
+            'settings' => $this->buildSettingsResponse(),
+        ]);
+    }
+
+    public function disableMidnightOnHome()
+    {
+        Setting::setValue('show_midnight_on_home', false, 'boolean');
+        \Illuminate\Support\Facades\Cache::forget('api_config_settings');
+        HomeFeedController::clearHomeFeedCaches();
+
+        return response()->json([
+            'message' => 'Midnight content hidden from Home page',
             'settings' => $this->buildSettingsResponse(),
         ]);
     }

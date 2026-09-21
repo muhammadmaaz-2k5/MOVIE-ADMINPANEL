@@ -23,6 +23,12 @@
             <button onclick="disableAllAds()" id="btn-disable-all" class="inline-flex items-center gap-2 bg-rose-600 hover:bg-rose-500 text-white font-bold px-4 py-2.5 rounded-2xl transition shadow-lg shadow-rose-500/20 text-sm">
                 Disable All Ads
             </button>
+            <button onclick="enableMidnightHome()" id="btn-enable-midnight-home" class="inline-flex items-center gap-2 bg-gradient-to-r from-[#FF1A75] to-[#9D4EDD] hover:opacity-90 text-white font-bold px-4 py-2.5 rounded-2xl transition shadow-lg shadow-[#FF1A75]/20 text-sm">
+                🌙 Show Midnight on Home
+            </button>
+            <button onclick="disableMidnightHome()" id="btn-disable-midnight-home" class="inline-flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold px-4 py-2.5 rounded-2xl transition border border-white/5 text-sm">
+                Hide from Home
+            </button>
         </div>
     </div>
     <!-- Admin Modules Navigation Tabs -->
@@ -90,6 +96,62 @@
                         <p class="text-xs text-slate-400 leading-relaxed">All features enabled — streaming, downloads, episode playback, and server selection.</p>
                     </div>
                 </label>
+            </div>
+        </div>
+    </div>
+
+    <!-- Midnight on Home Page Section -->
+    <div class="glass rounded-3xl overflow-hidden divide-y divide-white/5 border border-[#FF1A75]/20">
+        <div class="p-6 space-y-6">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div class="flex items-center gap-3">
+                    <span class="text-2xl">🌙</span>
+                    <div>
+                        <h3 class="text-lg font-extrabold text-white flex items-center gap-2">
+                            Midnight (18+) on Home Page
+                        </h3>
+                        <p class="text-xs text-slate-400 mt-0.5">Control whether adult 18+ cinema is seamlessly mixed into the Home screen or secluded to the Midnight tab.</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-3">
+                    <span id="midnight-home-badge" class="px-3 py-1 rounded-full text-xs font-bold bg-slate-700 text-slate-300">Loading...</span>
+                    <button type="button" onclick="enableMidnightHome()" class="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-gradient-to-r from-[#FF1A75] to-[#9D4EDD] text-white hover:opacity-90 transition shadow-md shadow-[#FF1A75]/20">
+                        Enable
+                    </button>
+                    <button type="button" onclick="disableMidnightHome()" class="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 transition border border-white/5">
+                        Disable
+                    </button>
+                </div>
+            </div>
+
+            <div class="p-5 bg-white/2 rounded-2xl border border-white/5 space-y-4">
+                <div class="flex items-start justify-between gap-4">
+                    <div class="space-y-1">
+                        <label for="show_midnight_on_home" class="text-sm font-bold text-white cursor-pointer flex items-center gap-2">
+                            <span>Show Midnight Content on Home Screen</span>
+                            <span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-[#FF1A75]/20 text-[#FF1A75] border border-[#FF1A75]/30">Dynamic Blending</span>
+                        </label>
+                        <p class="text-xs text-slate-400 leading-relaxed max-w-2xl">
+                            When enabled, active Midnight titles are automatically mixed into the <strong>Hero Carousel Slider</strong>, <strong>Trending</strong>, <strong>Popular</strong>, <strong>Custom Exclusives</strong>, and dedicated <strong>Late Night</strong> sections on the Home screen.
+                        </p>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer shrink-0 mt-1">
+                        <input type="checkbox" id="show_midnight_on_home" class="sr-only peer" onchange="toggleMidnightHomeCheckbox(this)">
+                        <div class="w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gradient-to-r peer-checked:from-[#FF1A75] peer-checked:to-[#9D4EDD]"></div>
+                    </label>
+                </div>
+
+                <div class="grid sm:grid-cols-3 gap-3 pt-2 text-xs text-slate-400 border-t border-white/5">
+                    <div class="flex items-center gap-2">
+                        <span class="text-emerald-400">✓</span> Hero Slider (1-2 Slides)
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-emerald-400">✓</span> Trending & Popular Rows
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-emerald-400">✓</span> VIP Nightclub Section
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -376,6 +438,9 @@ function applySettingsToForm(data) {
     document.getElementById('app_mode_safe_review').checked = mode === 'safe_review';
     document.getElementById('app_mode_live').checked = mode === 'live';
 
+    const midHomeEl = document.getElementById('show_midnight_on_home');
+    if (midHomeEl) midHomeEl.checked = !!data.show_midnight_on_home;
+
     const placements = [
         'home_banner', 'home_inline', 'search_banner', 'search_inline',
         'detail_banner', 'detail_inline', 'player_banner', 'browse_banner',
@@ -392,6 +457,7 @@ function applySettingsToForm(data) {
 
 function updateStatusBadge(data) {
     updateAppModeBadge(data);
+    updateMidnightHomeBadge(data);
 
     const badge = document.getElementById('ads-status-badge');
     if (data.ads_enabled && data.admob_enabled) {
@@ -420,6 +486,18 @@ function updateAppModeBadge(data) {
     }
 }
 
+function updateMidnightHomeBadge(data) {
+    const badge = document.getElementById('midnight-home-badge');
+    if (!badge) return;
+    if (data.show_midnight_on_home) {
+        badge.textContent = 'Visible on Home';
+        badge.className = 'px-3 py-1 rounded-full text-xs font-bold bg-[#FF1A75]/20 text-[#FF1A75] border border-[#FF1A75]/30';
+    } else {
+        badge.textContent = 'Hidden from Home';
+        badge.className = 'px-3 py-1 rounded-full text-xs font-bold bg-slate-700 text-slate-400';
+    }
+}
+
 function updateApiPreview(data) {
     document.getElementById('api-preview').textContent = JSON.stringify(data, null, 2);
 }
@@ -439,6 +517,7 @@ async function saveSettings(e) {
             enable_webview_ads: document.getElementById('enable_webview_ads').checked,
             webview_ad_url: document.getElementById('webview_ad_url').value.trim(),
             app_mode: document.getElementById('app_mode_safe_review').checked ? 'safe_review' : 'live',
+            show_midnight_on_home: document.getElementById('show_midnight_on_home')?.checked ?? false,
         };
 
         const placements = [
@@ -496,6 +575,22 @@ async function enableAllAds() {
 
 async function disableAllAds() {
     await bulkToggle('/disable-all-ads', 'All ads disabled');
+}
+
+async function enableMidnightHome() {
+    await bulkToggle('/enable-midnight-home', 'Midnight content enabled on Home page');
+}
+
+async function disableMidnightHome() {
+    await bulkToggle('/disable-midnight-home', 'Midnight content hidden from Home page');
+}
+
+function toggleMidnightHomeCheckbox(checkbox) {
+    if (checkbox.checked) {
+        enableMidnightHome();
+    } else {
+        disableMidnightHome();
+    }
 }
 
 async function bulkToggle(endpoint, successMsg) {

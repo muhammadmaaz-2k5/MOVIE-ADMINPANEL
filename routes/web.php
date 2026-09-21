@@ -169,6 +169,8 @@ Route::middleware(['web', 'admin.auth'])->group(function () {
         Route::post('/disable-all-ads', [\App\Http\Controllers\SettingsController::class, 'disableAllAds']);
         Route::post('/set-safe-review', [\App\Http\Controllers\SettingsController::class, 'setSafeReviewMode']);
         Route::post('/set-live-mode', [\App\Http\Controllers\SettingsController::class, 'setLiveMode']);
+        Route::post('/enable-midnight-home', [\App\Http\Controllers\SettingsController::class, 'enableMidnightOnHome']);
+        Route::post('/disable-midnight-home', [\App\Http\Controllers\SettingsController::class, 'disableMidnightOnHome']);
     });
 
     // Notification Manager

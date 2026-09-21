@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\CustomMovie;
 use App\Models\CustomMovieStream;
+use App\Models\Setting;
 use Illuminate\Http\Request;
 
 class CustomMovieController extends Controller
@@ -68,7 +69,9 @@ class CustomMovieController extends Controller
         if ($request->has('is_midnight')) {
             $query->where('is_midnight', filter_var($request->query('is_midnight'), FILTER_VALIDATE_BOOLEAN));
         } else {
-            $query->where('is_midnight', false);
+            if (!Setting::isMidnightOnHomeEnabled()) {
+                $query->where('is_midnight', false);
+            }
         }
 
         if ($type = $request->query('type')) {
