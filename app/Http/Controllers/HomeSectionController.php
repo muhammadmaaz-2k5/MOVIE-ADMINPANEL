@@ -63,8 +63,6 @@ class HomeSectionController extends Controller
     public static function clearHomeCaches(): void
     {
         \Illuminate\Support\Facades\Cache::forget('api_config_home_sections');
-        for ($i = 0; $i <= 25; $i++) {
-            \Illuminate\Support\Facades\Cache::forget("api_home_feed_{$i}");
-        }
+        HomeFeedController::clearHomeFeedCaches();
     }
 }

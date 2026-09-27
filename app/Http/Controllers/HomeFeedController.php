@@ -60,18 +60,18 @@ class HomeFeedController extends Controller
 
         // Soften forbidden keywords in title (client drops item if title contains: midnight, passion, adult, erotic)
         $title = $movie->title;
-        $title = preg_replace('/\bmidnight\b/i', 'Night', $title);
-        $title = preg_replace('/\bpassion\b/i', 'Desire', $title);
-        $title = preg_replace('/\badult\b/i', 'VIP', $title);
-        $title = preg_replace('/\berotic\b/i', 'Sensual', $title);
+        $title = str_ireplace('midnight', 'Night', $title);
+        $title = str_ireplace('passion', 'Desire', $title);
+        $title = str_ireplace('adult', 'VIP', $title);
+        $title = str_ireplace('erotic', 'Sensual', $title);
 
-        // Soften forbidden keywords in overview (client drops item if overview contains: adult, erotic, midnight, porn)
+        // Soften forbidden keywords in overview (client drops item if overview contains: adult, erotic, midnight, porn, passion)
         $overview = $movie->overview ?: '';
-        $overview = preg_replace('/\badult\b/i', 'mature', $overview);
-        $overview = preg_replace('/\berotic\b/i', 'romantic', $overview);
-        $overview = preg_replace('/\bmidnight\b/i', 'late night', $overview);
-        $overview = preg_replace('/\bporn\b/i', 'sensual drama', $overview);
-        $overview = preg_replace('/\bpassion\b/i', 'desire', $overview);
+        $overview = str_ireplace('midnight', 'late night', $overview);
+        $overview = str_ireplace('adult', 'mature', $overview);
+        $overview = str_ireplace('erotic', 'romantic', $overview);
+        $overview = str_ireplace('porn', 'sensual drama', $overview);
+        $overview = str_ireplace('passion', 'desire', $overview);
 
         // Neutralize aoneroom in image paths if present
         $posterPath = $movie->poster_path ?: '';
@@ -260,7 +260,7 @@ class HomeFeedController extends Controller
                 $formattedMidnight[] = $this->formatMidnightForHome($mMov);
             }
 
-            // Mix into Hero Carousel (Featured Slider)
+            // Mix into Hero Carousel (Featured Slider) - TOP MIDNIGHT AT FIRST CARD (Slide #1)
             if (!empty($formattedMidnight)) {
                 $heroMidnight = array_values(array_filter($formattedMidnight, function ($item) {
                     return !empty($item['backdrop_path']) || !empty($item['backdropUrl']);
@@ -269,17 +269,14 @@ class HomeFeedController extends Controller
                     $heroMidnight = $formattedMidnight;
                 }
 
-                // Interleave 1-2 top midnight items into hero slides
+                // Place top midnight item at Index 0 (Slide #1) for immediate high visibility
                 if (isset($heroMidnight[0])) {
-                    if (count($featuredItems) >= 2) {
-                        array_splice($featuredItems, 1, 0, [$heroMidnight[0]]);
-                    } else {
-                        $featuredItems[] = $heroMidnight[0];
-                    }
+                    array_unshift($featuredItems, $heroMidnight[0]);
                 }
+                // Interleave 2nd midnight item at Index 2 (Slide #3)
                 if (isset($heroMidnight[1])) {
-                    if (count($featuredItems) >= 4) {
-                        array_splice($featuredItems, 3, 0, [$heroMidnight[1]]);
+                    if (count($featuredItems) >= 3) {
+                        array_splice($featuredItems, 2, 0, [$heroMidnight[1]]);
                     } else {
                         $featuredItems[] = $heroMidnight[1];
                     }
@@ -287,16 +284,22 @@ class HomeFeedController extends Controller
                 $featuredItems = array_slice($featuredItems, 0, 5);
             }
 
-            // Mix into Custom Exclusives and Must-Watch
+            // Mix into Custom Exclusives and Must-Watch - PREPEND TO FIRST CARDS
             if (!empty($formattedMidnight)) {
-                $customMovies = array_merge(array_slice($formattedMidnight, 0, 5), $customMovies);
+                $customMovies = array_merge(array_slice($formattedMidnight, 0, 10), $customMovies);
+
+                $midnightMoviesList = [];
+                $midnightTvList = [];
                 foreach ($formattedMidnight as $fMid) {
                     if ($fMid['type'] === 'tv') {
-                        $mustWatchTv[] = $fMid;
+                        $midnightTvList[] = $fMid;
                     } else {
-                        $mustWatchMovies[] = $fMid;
+                        $midnightMoviesList[] = $fMid;
                     }
                 }
+                // Prepend midnight items so they appear at the FIRST CARDS of Must Watch rows
+                $mustWatchMovies = array_merge($midnightMoviesList, $mustWatchMovies);
+                $mustWatchTv = array_merge($midnightTvList, $mustWatchTv);
             }
         }
 
@@ -308,10 +311,21 @@ class HomeFeedController extends Controller
                 return !in_array($item['id'] ?? 0, $injectedIds);
             }));
 
-            // Smooth 2:1 ratio interleaving
+            // Prioritize midnight/custom content on FIRST CARDS (Card #1 and Card #3)
             $mixedTrending = [];
             $tIdx = 0;
             $injIdx = 0;
+
+            if ($injIdx < count($allInjected)) {
+                $mixedTrending[] = $allInjected[$injIdx++];
+            }
+            if ($tIdx < count($trendingFiltered)) {
+                $mixedTrending[] = $trendingFiltered[$tIdx++];
+            }
+            if ($injIdx < count($allInjected)) {
+                $mixedTrending[] = $allInjected[$injIdx++];
+            }
+
             while ($tIdx < count($trendingFiltered) || $injIdx < count($allInjected)) {
                 if ($tIdx < count($trendingFiltered)) {
                     $mixedTrending[] = $trendingFiltered[$tIdx++];
@@ -331,16 +345,27 @@ class HomeFeedController extends Controller
             $mixedPopular = [];
             $pIdx = 0;
             $injPopIdx = 0;
-            $injectedPopCopy = array_reverse($allInjected);
-            while ($pIdx < count($popularFiltered) || $injPopIdx < count($injectedPopCopy)) {
+            $injectedPopList = $allInjected; // Preserve top midnight items at the front
+
+            if ($injPopIdx < count($injectedPopList)) {
+                $mixedPopular[] = $injectedPopList[$injPopIdx++];
+            }
+            if ($pIdx < count($popularFiltered)) {
+                $mixedPopular[] = $popularFiltered[$pIdx++];
+            }
+            if ($injPopIdx < count($injectedPopList)) {
+                $mixedPopular[] = $injectedPopList[$injPopIdx++];
+            }
+
+            while ($pIdx < count($popularFiltered) || $injPopIdx < count($injectedPopList)) {
                 if ($pIdx < count($popularFiltered)) {
                     $mixedPopular[] = $popularFiltered[$pIdx++];
                 }
                 if ($pIdx < count($popularFiltered)) {
                     $mixedPopular[] = $popularFiltered[$pIdx++];
                 }
-                if ($injPopIdx < count($injectedPopCopy)) {
-                    $mixedPopular[] = $injectedPopCopy[$injPopIdx++];
+                if ($injPopIdx < count($injectedPopList)) {
+                    $mixedPopular[] = $injectedPopList[$injPopIdx++];
                 }
             }
             $popularResults = $mixedPopular;
@@ -366,11 +391,15 @@ class HomeFeedController extends Controller
                 $secMediaType = 'tv';
             }
 
-            // Interleave 1-2 midnight items into suitable home sections if enabled
+            // Put midnight item right at the FIRST card (index 0) of home sections if enabled
             if ($showMidnightOnHome && !empty($formattedMidnight)) {
                 $sectionMidnight = array_slice($formattedMidnight, 0, 2);
-                if (!empty($sectionMidnight) && count($items) >= 3) {
-                    array_splice($items, 2, 0, [$sectionMidnight[0]]);
+                if (!empty($sectionMidnight)) {
+                    // Prepend to card index 0 so it's the very first card visible
+                    array_unshift($items, $sectionMidnight[0]);
+                    if (isset($sectionMidnight[1]) && count($items) >= 4) {
+                        array_splice($items, 3, 0, [$sectionMidnight[1]]);
+                    }
                 }
             }
 
@@ -388,10 +417,13 @@ class HomeFeedController extends Controller
         })->values()->toArray();
 
         // Add dedicated Late Night home sections if enabled (clean titles without the literal word 'midnight')
+        // PREPEND them to the front of $sections so they appear as the FIRST dynamic section(s) on Home!
         if ($showMidnightOnHome && !empty($formattedMidnight)) {
-            $vipItems = array_slice($formattedMidnight, 0, 12);
+            $dedicatedSections = [];
+
+            $vipItems = array_slice($formattedMidnight, 0, 15);
             if (!empty($vipItems)) {
-                $sections[] = [
+                $dedicatedSections[] = [
                     'id'          => 99901,
                     'emoji'       => '🍸',
                     'title'       => 'VIP Nightclub Exclusives',
@@ -405,9 +437,9 @@ class HomeFeedController extends Controller
             }
 
             if (count($formattedMidnight) > 6) {
-                $noirItems = array_slice($formattedMidnight, 6, 12);
+                $noirItems = array_slice($formattedMidnight, 6, 15);
                 if (!empty($noirItems)) {
-                    $sections[] = [
+                    $dedicatedSections[] = [
                         'id'          => 99902,
                         'emoji'       => '🌙',
                         'title'       => 'Late Night Cinema & Thrillers',
@@ -420,6 +452,9 @@ class HomeFeedController extends Controller
                     ];
                 }
             }
+
+            // Put dedicated midnight sections at the VERY TOP of dynamic sections
+            $sections = array_merge($dedicatedSections, $sections);
         }
 
         return [
