@@ -269,13 +269,27 @@
 
         <!-- Add Stream Form -->
         <div class="px-6 py-4 border-b border-white/5 bg-white/1">
-            <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Add Custom Stream link</h4>
+            <div class="flex items-center justify-between mb-3">
+                <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Add Custom Stream link</h4>
+                <div class="flex items-center gap-1.5 flex-wrap">
+                    <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mr-0.5">Presets:</span>
+                    <button type="button" onclick="applyServerPreset('MxDrop [Fast Stream]', '💧', 'https://mxdrop.top/e/')" class="px-2 py-0.5 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 text-blue-400 text-[10px] font-bold transition flex items-center gap-1">
+                        <span>💧</span> MxDrop
+                    </button>
+                    <button type="button" onclick="applyServerPreset('VidFast HD', '⚡', 'https://vidfast.pro/')" class="px-2 py-0.5 rounded-lg bg-violet-500/10 hover:bg-violet-500/20 border border-violet-500/20 text-violet-400 text-[10px] font-bold transition flex items-center gap-1">
+                        <span>⚡</span> VidFast
+                    </button>
+                    <button type="button" onclick="applyServerPreset('VidSrc VIP', '▶', 'https://vidsrc.to/embed/')" class="px-2 py-0.5 rounded-lg bg-fuchsia-500/10 hover:bg-fuchsia-500/20 border border-fuchsia-500/20 text-fuchsia-400 text-[10px] font-bold transition flex items-center gap-1">
+                        <span>▶</span> VidSrc
+                    </button>
+                </div>
+            </div>
             <form id="stream-form" onsubmit="submitStreamForm(event)" class="space-y-3">
                 <input type="hidden" id="stream-form-id" value=""/>
                 
                 <div class="grid grid-cols-2 gap-3">
-                    <input id="stream-server" type="text" required placeholder="Server Name (e.g. Server HD [Hindi])" class="w-full bg-[#1E1E2E] border border-white/5 text-white text-xs rounded-xl px-3.5 py-2.5 focus:outline-none focus:border-violet-500/40 transition"/>
-                    <input id="stream-icon" type="text" placeholder="Icon (e.g. 🇮🇳 or 🔗)" class="w-full bg-[#1E1E2E] border border-white/5 text-white text-xs rounded-xl px-3.5 py-2.5 focus:outline-none focus:border-violet-500/40 transition"/>
+                    <input id="stream-server" type="text" required placeholder="Server Name (e.g. MxDrop [Fast Stream])" class="w-full bg-[#1E1E2E] border border-white/5 text-white text-xs rounded-xl px-3.5 py-2.5 focus:outline-none focus:border-violet-500/40 transition"/>
+                    <input id="stream-icon" type="text" placeholder="Icon (e.g. 💧 or 🔗)" class="w-full bg-[#1E1E2E] border border-white/5 text-white text-xs rounded-xl px-3.5 py-2.5 focus:outline-none focus:border-violet-500/40 transition"/>
                 </div>
 
                 <div class="grid grid-cols-2 gap-3 hidden" id="tv-fields">
@@ -283,7 +297,7 @@
                     <input id="stream-episode" type="number" placeholder="Episode Number" class="w-full bg-[#1E1E2E] border border-white/5 text-white text-xs rounded-xl px-3.5 py-2.5 focus:outline-none focus:border-violet-500/40 transition"/>
                 </div>
 
-                <input id="stream-url" type="url" required placeholder="Stream Embed Player URL (e.g. https://server.com/embed/...)" class="w-full bg-[#1E1E2E] border border-white/5 text-white text-xs rounded-xl px-3.5 py-2.5 focus:outline-none focus:border-violet-500/40 transition font-mono"/>
+                <input id="stream-url" type="text" required oninput="handleStreamUrlInput(event)" placeholder="Stream Embed URL or iframe (e.g. https://mxdrop.top/e/...)" class="w-full bg-[#1E1E2E] border border-white/5 text-white text-xs rounded-xl px-3.5 py-2.5 focus:outline-none focus:border-violet-500/40 transition font-mono"/>
 
                 <div class="flex gap-2">
                     <button type="submit" id="stream-submit-btn" class="flex-1 bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white font-bold py-2 rounded-xl text-xs hover:from-violet-500 hover:to-fuchsia-500 transition">Add Stream</button>
@@ -692,6 +706,48 @@ function closeStreamsDrawer() {
 function handleDrawerBackdropClick(event) {
     if (event.target.id === 'streams-drawer') {
         closeStreamsDrawer();
+    }
+}
+
+function applyServerPreset(name, icon, placeholderPrefix) {
+    document.getElementById('stream-server').value = name;
+    document.getElementById('stream-icon').value = icon;
+    const urlInput = document.getElementById('stream-url');
+    if (!urlInput.value) {
+        urlInput.placeholder = `${placeholderPrefix}...`;
+        urlInput.focus();
+    }
+}
+
+function handleStreamUrlInput(e) {
+    let val = e.target.value.trim();
+    // Auto-extract src attribute if full iframe tag was pasted
+    const iframeMatch = val.match(/src=["']([^"']+)["']/i);
+    if (iframeMatch) {
+        val = iframeMatch[1];
+        e.target.value = val;
+    }
+    // Auto-convert mixdrop/mxdrop download page (/f/) to embed player (/e/)
+    const mxMatch = val.match(/^https?:\/\/(www\.)?((?:mixdrop|mxdrop)\.[a-z0-9.]+)\/f\/([a-zA-Z0-9]+)/i);
+    if (mxMatch) {
+        val = `https://${mxMatch[2]}/e/${mxMatch[3]}`;
+        e.target.value = val;
+    }
+    // Auto-fill server name and icon if empty or default
+    const serverInput = document.getElementById('stream-server');
+    const iconInput = document.getElementById('stream-icon');
+    if (serverInput && (!serverInput.value || serverInput.value === 'Server' || serverInput.value.includes('Server HD'))) {
+        const lower = val.toLowerCase();
+        if (lower.includes('mxdrop') || lower.includes('mixdrop')) {
+            serverInput.value = 'MxDrop [Fast Stream]';
+            if (iconInput && !iconInput.value) iconInput.value = '💧';
+        } else if (lower.includes('vidfast')) {
+            serverInput.value = 'VidFast HD';
+            if (iconInput && !iconInput.value) iconInput.value = '⚡';
+        } else if (lower.includes('vidsrc')) {
+            serverInput.value = 'VidSrc VIP';
+            if (iconInput && !iconInput.value) iconInput.value = '▶';
+        }
     }
 }
 

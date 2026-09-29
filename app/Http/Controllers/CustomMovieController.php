@@ -342,9 +342,38 @@ class CustomMovieController extends Controller
         return response()->json($streams);
     }
 
+    private function normalizeStreamPayload(Request $request): void
+    {
+        if ($rawUrl = $request->input('stream_url')) {
+            $rawUrl = trim($rawUrl);
+            // If full iframe tag was pasted, extract src attribute
+            if (preg_match('/src=["\']([^"\']+)["\']/i', $rawUrl, $matches)) {
+                $rawUrl = $matches[1];
+            }
+            // Auto-convert mixdrop/mxdrop download page (/f/) to embed player (/e/)
+            if (preg_match('#^https?://(www\.)?((?:mixdrop|mxdrop)\.[a-z0-9.]+)/f/([a-zA-Z0-9]+)#i', $rawUrl, $m)) {
+                $rawUrl = "https://{$m[2]}/e/{$m[3]}";
+            }
+            $request->merge(['stream_url' => trim($rawUrl)]);
+        }
+
+        // Auto-assign smart default server name and icon for mxdrop / mixdrop if left blank or generic
+        $url = strtolower($request->input('stream_url', ''));
+        if (str_contains($url, 'mxdrop') || str_contains($url, 'mixdrop')) {
+            if (!$request->filled('server_name') || $request->input('server_name') === 'Server') {
+                $request->merge(['server_name' => 'MxDrop [Fast Stream]']);
+            }
+            if (!$request->filled('server_icon')) {
+                $request->merge(['server_icon' => '💧']);
+            }
+        }
+    }
+
     /** POST /admin/api/custom-movies/{id}/streams */
     public function storeStream(Request $request, int $id)
     {
+        $this->normalizeStreamPayload($request);
+
         $validated = $request->validate([
             'server_name'    => 'required|string|max:255',
             'server_icon'    => 'nullable|string|max:10',
@@ -366,6 +395,7 @@ class CustomMovieController extends Controller
     public function updateStream(Request $request, int $id)
     {
         $stream = CustomMovieStream::findOrFail($id);
+        $this->normalizeStreamPayload($request);
 
         $validated = $request->validate([
             'server_name'    => 'sometimes|required|string|max:255',

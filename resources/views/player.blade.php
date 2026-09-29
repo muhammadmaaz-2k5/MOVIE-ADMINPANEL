@@ -31,7 +31,7 @@
             <span class="text-xs text-slate-400 font-bold">Connecting to streaming server...</span>
         </div>
         
-        <iframe id="video-iframe" class="w-full h-full" src="" frameborder="0" allowfullscreen allow="autoplay; encrypted-media; picture-in-picture"></iframe>
+        <iframe id="video-iframe" class="w-full h-full" src="" frameborder="0" allowfullscreen allow="autoplay; encrypted-media; picture-in-picture" referrerpolicy="origin"></iframe>
     </div>
 
     <!-- TV Episode Navigation (Only shown for TV shows) -->
