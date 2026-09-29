@@ -50,6 +50,40 @@ class EmbedProxyController extends Controller
     }
 
     /**
+     * Fetch stream data directly from fiuosba API.
+     */
+    public static function fetchFiuosbaStream(string $filecode): ?array
+    {
+        $clean = preg_replace('/[^a-zA-Z0-9_-]/', '', trim($filecode));
+        if (empty($clean)) {
+            return null;
+        }
+
+        $ch = curl_init('https://fiuosba.com/api/stream');
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode(['filecode' => $clean, 'device' => 'android']));
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            'Content-Type: application/json',
+            'Referer: https://fiuosba.com/e/' . $clean,
+            'User-Agent: Mozilla/5.0 (Linux; Android 13; Mobile) AppleWebKit/537.36'
+        ]);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 6);
+        $res = curl_exec($ch);
+        $err = curl_error($ch);
+        curl_close($ch);
+
+        if ($res && empty($err)) {
+            $data = json_decode($res, true);
+            if (!empty($data['streaming_url'])) {
+                return $data;
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * Render the embed player wrapper view.
      * GET /embed/player?url={targetUrl}&bottom={offsetInPx}
      */
@@ -67,6 +101,22 @@ class EmbedProxyController extends Controller
 
         $bottom = $request->query('bottom') ?: $request->query('offset');
         $bottom = is_numeric($bottom) ? max(0, min(300, (int)$bottom)) : null;
+
+        // For fiuosba: serve direct native JWPlayer (no iframes, no sandbox traps, perfect mobile sizes & controls)
+        if (str_contains(strtolower($url), 'fiuosba.com')) {
+            if (preg_match('#fiuosba\.com/(?:e|f|v|d)/([a-zA-Z0-9_-]+)#i', $url, $m)) {
+                $streamData = self::fetchFiuosbaStream($m[1]);
+                if ($streamData) {
+                    return response()
+                        ->view('embed.fiuosba_player', [
+                            'streamData' => $streamData,
+                            'filecode'   => $m[1],
+                            'bottom'     => $bottom,
+                        ])
+                        ->header('X-Frame-Options', 'ALLOWALL');
+                }
+            }
+        }
 
         return response()
             ->view('embed.player', [
@@ -90,6 +140,17 @@ class EmbedProxyController extends Controller
         $targetUrl = "https://fiuosba.com/e/" . $cleanCode;
         $bottom = $request->query('bottom') ?: $request->query('offset');
         $bottom = is_numeric($bottom) ? max(0, min(300, (int)$bottom)) : null;
+
+        $streamData = self::fetchFiuosbaStream($cleanCode);
+        if ($streamData) {
+            return response()
+                ->view('embed.fiuosba_player', [
+                    'streamData' => $streamData,
+                    'filecode'   => $cleanCode,
+                    'bottom'     => $bottom,
+                ])
+                ->header('X-Frame-Options', 'ALLOWALL');
+        }
 
         return response()
             ->view('embed.player', [
