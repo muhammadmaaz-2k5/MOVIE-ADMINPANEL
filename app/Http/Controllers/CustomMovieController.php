@@ -59,6 +59,15 @@ class CustomMovieController extends Controller
         $data['description'] = $movie->overview;
         $data['release_date'] = $movie->year ? "{$movie->year}-01-01" : null;
 
+        if (!empty($data['streams'])) {
+            foreach ($data['streams'] as &$stream) {
+                if (!empty($stream['stream_url'])) {
+                    $stream['stream_url'] = \App\Http\Controllers\EmbedProxyController::resolveStreamUrl($stream['stream_url']);
+                }
+            }
+            unset($stream);
+        }
+
         return response()->json($data);
     }
 
@@ -354,6 +363,10 @@ class CustomMovieController extends Controller
             if (preg_match('#^https?://(www\.)?((?:mixdrop|mxdrop)\.[a-z0-9.]+)/f/([a-zA-Z0-9]+)#i', $rawUrl, $m)) {
                 $rawUrl = "https://{$m[2]}/e/{$m[3]}";
             }
+            // Auto-convert fiuosba download/watch page (/f/, /v/, /d/) to embed player (/e/)
+            if (preg_match('#^https?://(www\.)?(fiuosba\.[a-z0-9.]+)/(?:f|v|d)/([a-zA-Z0-9]+)#i', $rawUrl, $m)) {
+                $rawUrl = "https://{$m[2]}/e/{$m[3]}";
+            }
             $request->merge(['stream_url' => trim($rawUrl)]);
         }
 
@@ -365,6 +378,13 @@ class CustomMovieController extends Controller
             }
             if (!$request->filled('server_icon')) {
                 $request->merge(['server_icon' => '💧']);
+            }
+        } elseif (str_contains($url, 'fiuosba')) {
+            if (!$request->filled('server_name') || $request->input('server_name') === 'Server') {
+                $request->merge(['server_name' => 'Fiuosba [Fast Stream]']);
+            }
+            if (!$request->filled('server_icon')) {
+                $request->merge(['server_icon' => '⚡']);
             }
         }
     }

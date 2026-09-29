@@ -101,14 +101,15 @@ class ConfigController extends Controller
                 }
 
                 $customServers = $streams->sortBy('sort_order')->map(function($stream) {
+                    $resolvedUrl = \App\Http\Controllers\EmbedProxyController::resolveStreamUrl($stream->stream_url);
                     return [
                         'id' => $stream->id,
                         'name' => $stream->server_name,
                         'label' => $stream->server_name,
                         'icon' => $stream->server_icon ?: '🔗',
-                        'movie_url_template' => $stream->stream_url,
-                        'tv_url_template' => $stream->stream_url,
-                        'stream_url' => $stream->stream_url,
+                        'movie_url_template' => $resolvedUrl,
+                        'tv_url_template' => $resolvedUrl,
+                        'stream_url' => $resolvedUrl,
                         'is_custom' => true,
                     ];
                 })->values()->toArray();
@@ -119,8 +120,8 @@ class ConfigController extends Controller
 
                 if ($customMovie->tmdb_id) {
                     return DB::table('video_servers')->get()->map(function($server) use ($customMovie) {
-                        $movieTpl = str_replace('{id}', $customMovie->tmdb_id, $server->movie_url_template);
-                        $tvTpl    = str_replace('{id}', $customMovie->tmdb_id, $server->tv_url_template);
+                        $movieTpl = \App\Http\Controllers\EmbedProxyController::resolveStreamUrl(str_replace('{id}', $customMovie->tmdb_id, $server->movie_url_template));
+                        $tvTpl    = \App\Http\Controllers\EmbedProxyController::resolveStreamUrl(str_replace('{id}', $customMovie->tmdb_id, $server->tv_url_template));
                         return [
                             'id' => $server->id,
                             'name' => $server->name,
@@ -136,7 +137,11 @@ class ConfigController extends Controller
                 return [];
             }
 
-            return DB::table('video_servers')->get()->values()->toArray();
+            return DB::table('video_servers')->get()->map(function($server) {
+                $server->movie_url_template = \App\Http\Controllers\EmbedProxyController::resolveStreamUrl($server->movie_url_template);
+                $server->tv_url_template = \App\Http\Controllers\EmbedProxyController::resolveStreamUrl($server->tv_url_template);
+                return $server;
+            })->values()->toArray();
         });
 
         return response()->json($result)

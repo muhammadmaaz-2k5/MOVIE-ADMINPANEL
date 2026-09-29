@@ -91,6 +91,14 @@ Route::get('/play/custom/{id}', function ($id) {
 
 /*
 |--------------------------------------------------------------------------
+| Responsive Embed Player Wrappers (Controls Lifting for WebViews & Mobile)
+|--------------------------------------------------------------------------
+*/
+Route::get('/embed/player', [\App\Http\Controllers\EmbedProxyController::class, 'render'])->name('embed.player');
+Route::get('/embed/fiuosba/{code}', [\App\Http\Controllers\EmbedProxyController::class, 'fiuosba'])->name('embed.fiuosba');
+
+/*
+|--------------------------------------------------------------------------
 | Public Mobile App & Web APIs (Unrestricted for Mobile Clients)
 |--------------------------------------------------------------------------
 */

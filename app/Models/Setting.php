@@ -37,17 +37,21 @@ class Setting extends Model
 
     public static function getValue(string $key, $default = null)
     {
-        $setting = static::where('key', $key)->first();
-        if (!$setting) {
+        try {
+            $setting = static::where('key', $key)->first();
+            if (!$setting) {
+                return $default;
+            }
+            
+            return match($setting->type) {
+                'boolean' => (bool) $setting->value,
+                'integer' => (int) $setting->value,
+                'json' => json_decode($setting->value, true),
+                default => $setting->value,
+            };
+        } catch (\Throwable $e) {
             return $default;
         }
-        
-        return match($setting->type) {
-            'boolean' => (bool) $setting->value,
-            'integer' => (int) $setting->value,
-            'json' => json_decode($setting->value, true),
-            default => $setting->value,
-        };
     }
 
     public static function setValue(string $key, $value, string $type = 'string'): void

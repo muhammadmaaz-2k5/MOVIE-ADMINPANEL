@@ -273,6 +273,9 @@
                 <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Add Custom Stream link</h4>
                 <div class="flex items-center gap-1.5 flex-wrap">
                     <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mr-0.5">Presets:</span>
+                    <button type="button" onclick="applyServerPreset('Fiuosba [Fast Stream]', '⚡', 'https://fiuosba.com/e/')" class="px-2 py-0.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 text-amber-400 text-[10px] font-bold transition flex items-center gap-1">
+                        <span>⚡</span> Fiuosba
+                    </button>
                     <button type="button" onclick="applyServerPreset('MxDrop [Fast Stream]', '💧', 'https://mxdrop.top/e/')" class="px-2 py-0.5 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 text-blue-400 text-[10px] font-bold transition flex items-center gap-1">
                         <span>💧</span> MxDrop
                     </button>
@@ -733,12 +736,21 @@ function handleStreamUrlInput(e) {
         val = `https://${mxMatch[2]}/e/${mxMatch[3]}`;
         e.target.value = val;
     }
+    // Auto-convert fiuosba download/watch page (/f/, /v/, /d/) to embed player (/e/)
+    const fiMatch = val.match(/^https?:\/\/(www\.)?(fiuosba\.[a-z0-9.]+)\/(?:f|v|d)\/([a-zA-Z0-9]+)/i);
+    if (fiMatch) {
+        val = `https://${fiMatch[2]}/e/${fiMatch[3]}`;
+        e.target.value = val;
+    }
     // Auto-fill server name and icon if empty or default
     const serverInput = document.getElementById('stream-server');
     const iconInput = document.getElementById('stream-icon');
     if (serverInput && (!serverInput.value || serverInput.value === 'Server' || serverInput.value.includes('Server HD'))) {
         const lower = val.toLowerCase();
-        if (lower.includes('mxdrop') || lower.includes('mixdrop')) {
+        if (lower.includes('fiuosba')) {
+            serverInput.value = 'Fiuosba [Fast Stream]';
+            if (iconInput && !iconInput.value) iconInput.value = '⚡';
+        } else if (lower.includes('mxdrop') || lower.includes('mixdrop')) {
             serverInput.value = 'MxDrop [Fast Stream]';
             if (iconInput && !iconInput.value) iconInput.value = '💧';
         } else if (lower.includes('vidfast')) {
