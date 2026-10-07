@@ -60,7 +60,56 @@
         <div class="glass p-6 rounded-3xl space-y-6">
             <h2 class="text-base font-bold text-white">Direct Push Broadcast</h2>
             <form id="notification-form" onsubmit="sendDirectNotification(event)">
+                <input type="hidden" id="notif-custom-id" value="">
+                <input type="hidden" id="notif-is-custom" value="false">
+
                 <div class="space-y-4">
+                    <!-- Quick Content Prefill Bar (Custom Content / TMDB) -->
+                    <div class="p-4 rounded-2xl bg-[#171727] border border-white/5 space-y-3">
+                        <div class="flex items-center justify-between flex-wrap gap-2">
+                            <span class="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                                ⚡ Prefill from Content (Optional)
+                            </span>
+                            <div class="flex items-center gap-1 bg-[#1E1E2E] p-1 rounded-xl border border-white/5">
+                                <button type="button" id="direct-mode-custom-btn" onclick="switchDirectPrefillMode('custom')" class="px-3 py-1 text-xs font-bold rounded-lg bg-violet-600 text-white transition">💎 Custom Content</button>
+                                <button type="button" id="direct-mode-tmdb-btn" onclick="switchDirectPrefillMode('tmdb')" class="px-3 py-1 text-xs font-bold rounded-lg text-slate-400 hover:text-white transition">🎬 TMDB Database</button>
+                            </div>
+                        </div>
+
+                        <!-- Custom Content Picker -->
+                        <div id="direct-prefill-custom-wrapper" class="relative">
+                            <div class="relative">
+                                <svg class="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                                <input id="direct-custom-search" type="text" placeholder="Search custom movie, series, or anime by title (or click to view recent)..." onfocus="searchDirectCustomContent()" oninput="searchDirectCustomContent()" class="w-full bg-[#1E1E2E] border border-white/5 text-white text-sm rounded-xl pl-10 pr-4 py-2.5 placeholder-slate-500 focus:outline-none focus:border-violet-500/40 transition"/>
+                            </div>
+                            <div id="direct-custom-results" class="space-y-1.5 max-h-64 overflow-y-auto scrollbar-thin mt-2 p-1 bg-[#121220] rounded-xl border border-white/5 hidden"></div>
+                        </div>
+
+                        <!-- TMDB Picker -->
+                        <div id="direct-prefill-tmdb-wrapper" class="relative hidden">
+                            <div class="relative">
+                                <svg class="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                                <input id="direct-tmdb-search" type="text" placeholder="Type movie or TV show title to search TMDB..." oninput="searchDirectTmdb()" class="w-full bg-[#1E1E2E] border border-white/5 text-white text-sm rounded-xl pl-10 pr-4 py-2.5 placeholder-slate-500 focus:outline-none focus:border-violet-500/40 transition"/>
+                            </div>
+                            <div id="direct-tmdb-results" class="space-y-1.5 max-h-64 overflow-y-auto scrollbar-thin mt-2 p-1 bg-[#121220] rounded-xl border border-white/5 hidden"></div>
+                        </div>
+
+                        <!-- Selected Content Banner -->
+                        <div id="direct-selected-banner" class="hidden items-center justify-between p-3 rounded-xl bg-violet-600/10 border border-violet-500/30 text-xs">
+                            <div class="flex items-center gap-3 min-w-0">
+                                <img id="direct-selected-img" src="" class="w-8 h-11 rounded-lg object-cover bg-[#1E1E2E] flex-shrink-0 border border-white/10" onerror="this.style.display='none'"/>
+                                <div class="min-w-0">
+                                    <div class="flex items-center gap-1.5 flex-wrap">
+                                        <span id="direct-selected-badge" class="px-1.5 py-0.5 rounded bg-violet-600 text-white font-extrabold text-[9px]">CUSTOM</span>
+                                        <span id="direct-selected-title" class="font-bold text-white truncate text-xs">Movie Title</span>
+                                    </div>
+                                    <p id="direct-selected-meta" class="text-[10px] text-slate-400 mt-0.5">Deep-Link ID: 1000000001 · Type: movie</p>
+                                </div>
+                            </div>
+                            <button type="button" onclick="clearDirectSelectedContent()" class="text-slate-400 hover:text-white px-2.5 py-1.5 rounded-lg hover:bg-white/5 transition text-xs font-bold flex-shrink-0">✕ Clear</button>
+                        </div>
+                    </div>
+
                     <div>
                         <label class="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-2">Notification Title *</label>
                         <input id="notif-title" type="text" required placeholder="e.g. New Episode Available!" class="w-full bg-[#1E1E2E] border border-white/5 text-white text-sm rounded-xl px-4 py-3 placeholder-slate-500 focus:outline-none focus:border-violet-500/40 transition"/>
@@ -231,14 +280,31 @@
             </button>
         </div>
 
-        <!-- TMDB Search (Optional prefill helper) -->
+        <!-- TMDB & Custom Content Search (Optional prefill helper) -->
         <div id="tmdb-search-section" class="px-6 py-4 border-b border-white/5 space-y-3">
-            <label class="text-xs font-semibold text-slate-400 uppercase tracking-wider block">Prefill with TMDB Data (Optional)</label>
-            <div class="relative">
-                <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-                <input id="tmdb-search" type="text" placeholder="Type movie/show title to search TMDB..." oninput="searchTmdb()" class="w-full bg-[#1E1E2E] border border-white/5 text-white text-sm rounded-xl pl-9 pr-4 py-2.5 placeholder-slate-500 focus:outline-none focus:border-violet-500/40 transition"/>
+            <div class="flex items-center justify-between flex-wrap gap-2">
+                <label class="text-xs font-semibold text-slate-400 uppercase tracking-wider block">Prefill with Content Data (Optional)</label>
+                <div class="flex items-center gap-1 bg-[#1E1E2E] p-1 rounded-xl border border-white/5">
+                    <button type="button" id="template-mode-custom-btn" onclick="switchTemplatePrefillMode('custom')" class="px-2.5 py-0.5 text-xs font-bold rounded-lg bg-violet-600 text-white transition">💎 Custom Content</button>
+                    <button type="button" id="template-mode-tmdb-btn" onclick="switchTemplatePrefillMode('tmdb')" class="px-2.5 py-0.5 text-xs font-bold rounded-lg text-slate-400 hover:text-white transition">🎬 TMDB Database</button>
+                </div>
             </div>
-            <div id="tmdb-results" class="space-y-2 max-h-52 overflow-y-auto scrollbar-thin hidden"></div>
+
+            <div id="template-custom-search-wrapper" class="relative">
+                <div class="relative">
+                    <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                    <input id="template-custom-search" type="text" placeholder="Search custom movie or series by title..." onfocus="searchTemplateCustom()" oninput="searchTemplateCustom()" class="w-full bg-[#1E1E2E] border border-white/5 text-white text-sm rounded-xl pl-9 pr-4 py-2.5 placeholder-slate-500 focus:outline-none focus:border-violet-500/40 transition"/>
+                </div>
+                <div id="template-custom-results" class="space-y-1.5 max-h-52 overflow-y-auto scrollbar-thin mt-2 p-1 bg-[#121220] rounded-xl border border-white/5 hidden"></div>
+            </div>
+
+            <div id="template-tmdb-search-wrapper" class="relative hidden">
+                <div class="relative">
+                    <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                    <input id="tmdb-search" type="text" placeholder="Type movie/show title to search TMDB..." oninput="searchTmdb()" class="w-full bg-[#1E1E2E] border border-white/5 text-white text-sm rounded-xl pl-9 pr-4 py-2.5 placeholder-slate-500 focus:outline-none focus:border-violet-500/40 transition"/>
+                </div>
+                <div id="tmdb-results" class="space-y-2 max-h-52 overflow-y-auto scrollbar-thin hidden"></div>
+            </div>
         </div>
 
         <!-- CRUD Form -->
@@ -410,6 +476,8 @@ async function sendDirectNotification(e) {
     formData.append('episode_number', document.getElementById('notif-episode').value);
     formData.append('item_type', document.getElementById('notif-item-type').value);
     formData.append('image_type', document.getElementById('notif-image-type').value);
+    formData.append('is_custom', document.getElementById('notif-is-custom')?.value || 'false');
+    formData.append('custom_id', document.getElementById('notif-custom-id')?.value || '');
     formData.append('_token', '{{ csrf_token() }}');
 
     const imageType = document.getElementById('notif-image-type').value;
@@ -434,6 +502,7 @@ async function sendDirectNotification(e) {
         if (res.ok && data.success) {
             showToast(data.message);
             document.getElementById('notification-form').reset();
+            clearDirectSelectedContent();
             toggleDirectImageInput();
             onDirectScreenChange();
         } else {
@@ -753,6 +822,324 @@ async function sendRandomNotification(type, button) {
         button.disabled = false;
         button.textContent = originalText;
     }
+}
+
+// ── Direct Broadcast Prefill Helpers (Custom & TMDB) ──────────────────────────
+let directCustomTimer = null;
+let directTmdbTimer = null;
+let directCustomSearchResults = [];
+let directTmdbSearchResults = [];
+
+function switchDirectPrefillMode(mode) {
+    const customBtn = document.getElementById('direct-mode-custom-btn');
+    const tmdbBtn = document.getElementById('direct-mode-tmdb-btn');
+    const customWrapper = document.getElementById('direct-prefill-custom-wrapper');
+    const tmdbWrapper = document.getElementById('direct-prefill-tmdb-wrapper');
+
+    if (mode === 'custom') {
+        customBtn.className = "px-3 py-1 text-xs font-bold rounded-lg bg-violet-600 text-white transition";
+        tmdbBtn.className = "px-3 py-1 text-xs font-bold rounded-lg text-slate-400 hover:text-white transition";
+        customWrapper.classList.remove('hidden');
+        tmdbWrapper.classList.add('hidden');
+    } else {
+        customBtn.className = "px-3 py-1 text-xs font-bold rounded-lg text-slate-400 hover:text-white transition";
+        tmdbBtn.className = "px-3 py-1 text-xs font-bold rounded-lg bg-violet-600 text-white transition";
+        customWrapper.classList.add('hidden');
+        tmdbWrapper.classList.remove('hidden');
+    }
+}
+
+async function searchDirectCustomContent() {
+    clearTimeout(directCustomTimer);
+    const q = (document.getElementById('direct-custom-search')?.value || '').trim();
+    const container = document.getElementById('direct-custom-results');
+    if (!container) return;
+
+    directCustomTimer = setTimeout(async () => {
+        try {
+            const res = await fetch(`/admin/api/notifications/search-custom-content?query=${encodeURIComponent(q)}`);
+            const items = await res.json();
+            directCustomSearchResults = items || [];
+
+            if (directCustomSearchResults.length === 0) {
+                container.classList.remove('hidden');
+                container.innerHTML = `<div class="p-3 text-center text-slate-500 text-xs">No custom contents found.</div>`;
+                return;
+            }
+
+            container.classList.remove('hidden');
+            container.innerHTML = directCustomSearchResults.map((item, idx) => {
+                const title = item.title;
+                const year = item.year || '';
+                const typeIcon = item.type === 'tv' ? '📺 TV' : '🎬 Movie';
+                const midnightBadge = item.is_midnight ? '<span class="px-1.5 py-0.5 rounded text-[9px] bg-pink-500/20 text-pink-400 font-extrabold border border-pink-500/30">🌙 18+</span>' : '';
+                const poster = item.poster_path 
+                    ? (item.poster_path.startsWith('/') && !item.poster_path.startsWith('/uploads') ? 'https://image.tmdb.org/t/p/w92' + item.poster_path : item.poster_path)
+                    : `https://placehold.co/46x69/1E1E2E/FFF?text=${encodeURIComponent(title.substring(0,2))}`;
+
+                return `<button type="button" onclick="selectDirectCustomAtIndex(${idx})"
+                    class="flex items-center gap-3 w-full p-2.5 rounded-xl hover:bg-white/5 text-left border border-white/0 hover:border-violet-500/20 transition group">
+                    <img src="${poster}" class="w-8 h-11 rounded-lg object-cover bg-[#1E1E2E] flex-shrink-0 border border-white/10" onerror="this.src='https://placehold.co/40x55/1E1E2E/FFF?text=N/A'"/>
+                    <div class="min-w-0 flex-1">
+                        <div class="flex items-center gap-1.5 flex-wrap">
+                            <p class="text-xs font-bold text-white truncate group-hover:text-violet-400 transition">${title}</p>
+                            ${midnightBadge}
+                        </div>
+                        <p class="text-[10px] text-slate-400 mt-0.5">${typeIcon} · ${year ? year + ' · ' : ''}Offset ID: ${1000000000 + item.id}</p>
+                    </div>
+                </button>`;
+            }).join('');
+        } catch(e) {
+            console.error('Direct custom search error', e);
+        }
+    }, 250);
+}
+
+function selectDirectCustomAtIndex(idx) {
+    const item = directCustomSearchResults[idx];
+    if (!item) return;
+
+    document.getElementById('notif-title').value = `Now Streaming: ${item.title}`;
+    document.getElementById('notif-body').value = item.overview || `Watch ${item.title} now on NazaaraBox!`;
+
+    // Prefill image URL
+    const imgUrl = item.backdrop_path || item.poster_path || '';
+    document.getElementById('notif-image-type').value = 'url';
+    toggleDirectImageInput();
+    document.getElementById('notif-image').value = imgUrl;
+
+    // Prefill deep link
+    document.getElementById('notif-screen').value = 'watch';
+    onDirectScreenChange();
+    document.getElementById('notif-item-type').value = item.type || 'movie';
+    const offsetId = 1000000000 + item.id;
+    document.getElementById('notif-slug').value = offsetId;
+
+    // Mark as custom content
+    document.getElementById('notif-is-custom').value = 'true';
+    document.getElementById('notif-custom-id').value = item.id;
+
+    // Show indicator banner
+    const banner = document.getElementById('direct-selected-banner');
+    banner.classList.remove('hidden');
+    banner.classList.add('flex');
+    document.getElementById('direct-selected-badge').innerText = item.is_midnight ? '🌙 18+ VIP' : (item.type === 'tv' ? '📺 TV SERIES' : '🎬 MOVIE');
+    document.getElementById('direct-selected-title').innerText = item.title;
+    document.getElementById('direct-selected-meta').innerText = `Offset ID: ${offsetId} · Custom ID: #${item.id}`;
+
+    const poster = item.poster_path
+        ? (item.poster_path.startsWith('/') && !item.poster_path.startsWith('/uploads') ? 'https://image.tmdb.org/t/p/w92' + item.poster_path : item.poster_path)
+        : '';
+    const imgEl = document.getElementById('direct-selected-img');
+    if (poster) {
+        imgEl.src = poster;
+        imgEl.style.display = 'block';
+    } else {
+        imgEl.style.display = 'none';
+    }
+
+    // Hide dropdown
+    document.getElementById('direct-custom-results').classList.add('hidden');
+    document.getElementById('direct-custom-search').value = '';
+}
+
+function clearDirectSelectedContent() {
+    const banner = document.getElementById('direct-selected-banner');
+    if (banner) {
+        banner.classList.add('hidden');
+        banner.classList.remove('flex');
+    }
+    const isCustomEl = document.getElementById('notif-is-custom');
+    if (isCustomEl) isCustomEl.value = 'false';
+    const customIdEl = document.getElementById('notif-custom-id');
+    if (customIdEl) customIdEl.value = '';
+    const resultsEl = document.getElementById('direct-custom-results');
+    if (resultsEl) resultsEl.classList.add('hidden');
+    const searchEl = document.getElementById('direct-custom-search');
+    if (searchEl) searchEl.value = '';
+}
+
+function searchDirectTmdb() {
+    clearTimeout(directTmdbTimer);
+    const q = (document.getElementById('direct-tmdb-search')?.value || '').trim();
+    const container = document.getElementById('direct-tmdb-results');
+    if (!container) return;
+
+    if (q.length < 2) {
+        container.classList.add('hidden');
+        return;
+    }
+
+    directTmdbTimer = setTimeout(async () => {
+        try {
+            const endpoint = `/api/tmdb/search/multi?query=${encodeURIComponent(q)}`;
+            const data = await fetch(endpoint).then(r => r.json());
+            directTmdbSearchResults = (data.results || []).filter(r => r.media_type === 'movie' || r.media_type === 'tv').slice(0, 6);
+
+            if (directTmdbSearchResults.length === 0) {
+                container.classList.add('hidden');
+                return;
+            }
+
+            container.classList.remove('hidden');
+            container.innerHTML = directTmdbSearchResults.map((r, index) => {
+                const title = r.title || r.name;
+                const year = (r.release_date || r.first_air_date || '').substring(0,4);
+                const poster = r.poster_path 
+                    ? `https://image.tmdb.org/t/p/w92${r.poster_path}` 
+                    : `https://placehold.co/46x69/1E1E2E/FFF?text=${encodeURIComponent(title.substring(0,2))}`;
+                const typeIcon = r.media_type === 'movie' ? '🎬' : '📺';
+                
+                return `<button type="button" onclick="selectDirectTmdbAtIndex(${index})"
+                    class="flex items-center gap-3 w-full p-2.5 rounded-xl hover:bg-white/5 text-left border border-white/0 hover:border-violet-500/20 transition">
+                    <img src="${poster}" class="w-8 h-11 rounded-lg object-cover bg-[#1E1E2E] flex-shrink-0"/>
+                    <div class="min-w-0 flex-1">
+                        <p class="text-xs font-bold text-white truncate">${typeIcon} ${title}</p>
+                        <p class="text-[10px] text-slate-400">${year} · TMDB ID ${r.id}</p>
+                    </div>
+                </button>`;
+            }).join('');
+        } catch(e) {
+            console.error('Direct TMDB search error', e);
+        }
+    }, 350);
+}
+
+function selectDirectTmdbAtIndex(idx) {
+    const c = directTmdbSearchResults[idx];
+    if (!c) return;
+
+    document.getElementById('notif-title').value = c.title || c.name || '';
+    document.getElementById('notif-body').value = c.overview || '';
+
+    // Image URL
+    const imgPath = c.backdrop_path || c.poster_path || '';
+    document.getElementById('notif-image-type').value = 'url';
+    toggleDirectImageInput();
+    document.getElementById('notif-image').value = imgPath ? `https://image.tmdb.org/t/p/w780${imgPath}` : '';
+
+    // Routing
+    document.getElementById('notif-screen').value = 'watch';
+    onDirectScreenChange();
+    document.getElementById('notif-item-type').value = c.media_type || 'movie';
+    document.getElementById('notif-slug').value = c.id;
+
+    // Reset custom
+    document.getElementById('notif-is-custom').value = 'false';
+    document.getElementById('notif-custom-id').value = '';
+
+    // Show indicator banner
+    const banner = document.getElementById('direct-selected-banner');
+    banner.classList.remove('hidden');
+    banner.classList.add('flex');
+    document.getElementById('direct-selected-badge').innerText = (c.media_type === 'tv' ? '📺 TMDB TV' : '🎬 TMDB MOVIE');
+    document.getElementById('direct-selected-title').innerText = c.title || c.name || '';
+    document.getElementById('direct-selected-meta').innerText = `TMDB ID: ${c.id}`;
+
+    const poster = c.poster_path ? `https://image.tmdb.org/t/p/w92${c.poster_path}` : '';
+    const imgEl = document.getElementById('direct-selected-img');
+    if (poster) {
+        imgEl.src = poster;
+        imgEl.style.display = 'block';
+    } else {
+        imgEl.style.display = 'none';
+    }
+
+    document.getElementById('direct-tmdb-results').classList.add('hidden');
+    document.getElementById('direct-tmdb-search').value = '';
+}
+
+// ── Template Modal Prefill Helpers (Custom & TMDB) ───────────────────────────
+let templateCustomTimer = null;
+let templateCustomSearchResults = [];
+
+function switchTemplatePrefillMode(mode) {
+    const customBtn = document.getElementById('template-mode-custom-btn');
+    const tmdbBtn = document.getElementById('template-mode-tmdb-btn');
+    const customWrapper = document.getElementById('template-custom-search-wrapper');
+    const tmdbWrapper = document.getElementById('template-tmdb-search-wrapper');
+
+    if (mode === 'custom') {
+        customBtn.className = "px-2.5 py-0.5 text-xs font-bold rounded-lg bg-violet-600 text-white transition";
+        tmdbBtn.className = "px-2.5 py-0.5 text-xs font-bold rounded-lg text-slate-400 hover:text-white transition";
+        customWrapper.classList.remove('hidden');
+        tmdbWrapper.classList.add('hidden');
+    } else {
+        customBtn.className = "px-2.5 py-0.5 text-xs font-bold rounded-lg text-slate-400 hover:text-white transition";
+        tmdbBtn.className = "px-2.5 py-0.5 text-xs font-bold rounded-lg bg-violet-600 text-white transition";
+        customWrapper.classList.add('hidden');
+        tmdbWrapper.classList.remove('hidden');
+    }
+}
+
+async function searchTemplateCustom() {
+    clearTimeout(templateCustomTimer);
+    const q = (document.getElementById('template-custom-search')?.value || '').trim();
+    const container = document.getElementById('template-custom-results');
+    if (!container) return;
+
+    templateCustomTimer = setTimeout(async () => {
+        try {
+            const res = await fetch(`/admin/api/notifications/search-custom-content?query=${encodeURIComponent(q)}`);
+            const items = await res.json();
+            templateCustomSearchResults = items || [];
+
+            if (templateCustomSearchResults.length === 0) {
+                container.classList.remove('hidden');
+                container.innerHTML = `<div class="p-3 text-center text-slate-500 text-xs">No custom contents found.</div>`;
+                return;
+            }
+
+            container.classList.remove('hidden');
+            container.innerHTML = templateCustomSearchResults.map((item, idx) => {
+                const title = item.title;
+                const year = item.year || '';
+                const typeIcon = item.type === 'tv' ? '📺 TV' : '🎬 Movie';
+                const midnightBadge = item.is_midnight ? '<span class="px-1.5 py-0.5 rounded text-[9px] bg-pink-500/20 text-pink-400 font-extrabold border border-pink-500/30">🌙 18+</span>' : '';
+                const poster = item.poster_path 
+                    ? (item.poster_path.startsWith('/') && !item.poster_path.startsWith('/uploads') ? 'https://image.tmdb.org/t/p/w92' + item.poster_path : item.poster_path)
+                    : `https://placehold.co/46x69/1E1E2E/FFF?text=${encodeURIComponent(title.substring(0,2))}`;
+
+                return `<button type="button" onclick="selectTemplateCustomAtIndex(${idx})"
+                    class="flex items-center gap-3 w-full p-2.5 rounded-xl hover:bg-white/5 text-left border border-white/0 hover:border-violet-500/20 transition group">
+                    <img src="${poster}" class="w-8 h-11 rounded-lg object-cover bg-[#1E1E2E] flex-shrink-0 border border-white/10" onerror="this.src='https://placehold.co/40x55/1E1E2E/FFF?text=N/A'"/>
+                    <div class="min-w-0 flex-1">
+                        <div class="flex items-center gap-1.5 flex-wrap">
+                            <p class="text-xs font-bold text-white truncate group-hover:text-violet-400 transition">${title}</p>
+                            ${midnightBadge}
+                        </div>
+                        <p class="text-[10px] text-slate-400 mt-0.5">${typeIcon} · ${year ? year + ' · ' : ''}Offset ID: ${1000000000 + item.id}</p>
+                    </div>
+                </button>`;
+            }).join('');
+        } catch(e) {
+            console.error('Template custom search error', e);
+        }
+    }, 250);
+}
+
+function selectTemplateCustomAtIndex(idx) {
+    const item = templateCustomSearchResults[idx];
+    if (!item) return;
+
+    const offsetId = 1000000000 + item.id;
+    document.getElementById('form-type').value = item.type || 'movie';
+    document.getElementById('form-tmdb-id').value = offsetId;
+    document.getElementById('form-title').value = `Now Streaming: ${item.title}`;
+    document.getElementById('form-body').value = item.overview || `Watch ${item.title} now on NazaaraBox!`;
+
+    // Choose TMDB/URL image or set image path
+    document.getElementById('form-image-type').value = 'tmdb';
+    toggleImageInput();
+    document.getElementById('form-image-path').value = item.backdrop_path || item.poster_path || '';
+
+    // Prefill linking details
+    document.getElementById('form-screen').value = 'watch';
+    document.getElementById('form-drama-slug').value = offsetId;
+    onFormScreenChange();
+
+    document.getElementById('template-custom-results').classList.add('hidden');
+    document.getElementById('template-custom-search').value = '';
 }
 
 // ── TMDB Inline Search & Prefill ──────────────────────────────────────────────

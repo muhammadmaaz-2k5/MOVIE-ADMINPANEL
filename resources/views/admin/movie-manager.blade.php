@@ -319,6 +319,65 @@
     </div>
 </div>
 
+<!-- Push Notification Modal for Custom Movie -->
+<div id="notify-modal" class="fixed inset-0 bg-slate-950/85 backdrop-blur-md z-50 flex items-center justify-center hidden" onclick="if(event.target===this)closeNotifyModal()">
+    <div class="w-full max-w-lg bg-[#121220] rounded-3xl border border-white/8 shadow-2xl p-6 mx-4 space-y-4 max-h-[90vh] overflow-y-auto">
+        <div class="flex items-center justify-between pb-3 border-b border-white/5">
+            <div class="flex items-center gap-2.5">
+                <div class="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
+                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+                </div>
+                <div>
+                    <h3 class="text-base font-extrabold text-white">Send Push Notification</h3>
+                    <p class="text-xs text-slate-400">Broadcast instant alert to all app users via Firebase FCM</p>
+                </div>
+            </div>
+            <button onclick="closeNotifyModal()" class="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition">✕</button>
+        </div>
+
+        <!-- Movie Header Preview -->
+        <div class="flex items-center gap-3 p-3 rounded-2xl bg-[#171727] border border-white/5">
+            <img id="notify-movie-poster" src="" class="w-10 h-14 rounded-xl object-cover bg-[#1E1E2E] border border-white/10 flex-shrink-0" onerror="this.src='https://placehold.co/40x56/1E1E2E/FFF?text=N/A'"/>
+            <div class="min-w-0 flex-1">
+                <h4 id="notify-movie-title" class="text-sm font-bold text-white truncate">Movie Title</h4>
+                <p id="notify-movie-meta" class="text-[11px] text-slate-400 mt-0.5">Custom Content · ID: 1000000000</p>
+            </div>
+        </div>
+
+        <form id="notify-form" onsubmit="submitNotifyForm(event)" class="space-y-3.5">
+            <input type="hidden" id="notify-movie-id" value="">
+            
+            <div>
+                <label class="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-1.5">Notification Title *</label>
+                <input id="notify-title" type="text" required class="w-full bg-[#1E1E2E] border border-white/5 text-white text-xs rounded-xl px-3.5 py-2.5 focus:outline-none focus:border-amber-500/40 transition"/>
+            </div>
+
+            <div>
+                <label class="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-1.5">Notification Body *</label>
+                <textarea id="notify-body" rows="3" required class="w-full bg-[#1E1E2E] border border-white/5 text-white text-xs rounded-xl px-3.5 py-2.5 focus:outline-none focus:border-amber-500/40 transition"></textarea>
+            </div>
+
+            <div>
+                <label class="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-1.5">Banner Image URL (Optional)</label>
+                <input id="notify-image-url" type="text" class="w-full bg-[#1E1E2E] border border-white/5 text-white text-xs rounded-xl px-3.5 py-2.5 focus:outline-none focus:border-amber-500/40 transition"/>
+            </div>
+
+            <div class="p-3 rounded-xl bg-violet-600/10 border border-violet-500/20 text-[11px] text-violet-300 flex items-center justify-between">
+                <span>🎯 Tapping notification opens Watch Details for this custom movie</span>
+                <span class="font-bold text-violet-400">1-Click Watch</span>
+            </div>
+
+            <div class="flex gap-3 pt-2">
+                <button type="submit" id="notify-submit-btn" class="flex-1 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-extrabold py-2.5 rounded-xl transition text-xs shadow-lg shadow-amber-500/10 flex items-center justify-center gap-1.5">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
+                    Send Push Notification Now
+                </button>
+                <button type="button" onclick="closeNotifyModal()" class="px-5 py-2.5 bg-[#1E1E2E] border border-white/5 text-slate-400 hover:text-white font-bold rounded-xl transition text-xs">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <!-- Delete Confirm Modal -->
 <div id="delete-modal" class="fixed inset-0 bg-slate-950/85 backdrop-blur-md z-50 flex items-center justify-center hidden">
     <div class="w-full max-w-sm bg-[#121220] rounded-3xl border border-white/8 shadow-2xl p-6 mx-4 space-y-5">
@@ -439,6 +498,9 @@ function renderTable(movies) {
             <td class="px-5 py-3.5">${activeEl}</td>
             <td class="px-5 py-3.5">
                 <div class="flex gap-2">
+                    <button onclick="openNotifyModal(${JSON.stringify(movie).replace(/"/g,'&quot;')})" class="p-1.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400 hover:bg-amber-500/20 transition" title="Send Push Notification">
+                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+                    </button>
                     <button onclick="openEditModal(${JSON.stringify(movie).replace(/"/g,'&quot;')})" class="p-1.5 rounded-lg bg-violet-500/10 border border-violet-500/20 text-violet-400 hover:bg-violet-500/20 transition" title="Edit Metadata">
                         <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                     </button>
@@ -878,6 +940,78 @@ async function deleteStream(id) {
         showToast('Stream removed.', 'success');
     } catch(e) {
         showToast('Failed to delete stream.', 'error');
+    }
+}
+
+// ── Push Notification Modal Functions ─────────────────────────────────────────
+function openNotifyModal(movie) {
+    document.getElementById('notify-movie-id').value = movie.id;
+    document.getElementById('notify-movie-title').innerText = movie.title;
+    const offsetId = 1000000000 + movie.id;
+    document.getElementById('notify-movie-meta').innerText = `Custom Movie · Deep-Link ID: ${offsetId}`;
+    
+    const poster = movie.poster_path 
+        ? (movie.poster_path.startsWith('/') && !movie.poster_path.startsWith('/uploads') ? 'https://image.tmdb.org/t/p/w92' + movie.poster_path : movie.poster_path)
+        : '';
+    const imgEl = document.getElementById('notify-movie-poster');
+    if (poster) {
+        imgEl.src = poster;
+        imgEl.style.display = 'block';
+    } else {
+        imgEl.style.display = 'none';
+    }
+
+    document.getElementById('notify-title').value = `Now Streaming: ${movie.title}`;
+    document.getElementById('notify-body').value = movie.overview || `Watch ${movie.title} now on NazaaraBox!`;
+    document.getElementById('notify-image-url').value = movie.backdrop_path || movie.poster_path || '';
+
+    document.getElementById('notify-modal').classList.remove('hidden');
+}
+
+function closeNotifyModal() {
+    document.getElementById('notify-modal').classList.add('hidden');
+}
+
+async function submitNotifyForm(e) {
+    e.preventDefault();
+    const btn = document.getElementById('notify-submit-btn');
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = `<svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-slate-950 inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Sending...`;
+
+    const id = document.getElementById('notify-movie-id').value;
+    const title = document.getElementById('notify-title').value;
+    const body = document.getElementById('notify-body').value;
+    const imageUrl = document.getElementById('notify-image-url').value;
+
+    try {
+        const csrfToken = '{{ csrf_token() }}';
+        const res = await fetch(`/admin/api/notifications/send-custom/${id}`, {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': csrfToken,
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+            },
+            body: JSON.stringify({
+                title: title,
+                body: body,
+                image_url: imageUrl
+            })
+        });
+
+        const data = await res.json();
+        if (res.ok && data.success) {
+            showToast(data.message || 'Push notification sent successfully!');
+            closeNotifyModal();
+        } else {
+            showToast(data.message || 'Failed to send notification', 'error');
+        }
+    } catch(err) {
+        showToast('Network error or server error.', 'error');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
     }
 }
 

@@ -28,6 +28,8 @@ class NotificationController extends Controller
             'episode_number' => 'nullable|string',
             'item_type' => 'nullable|string|in:movie,tv',
             'tmdb_id' => 'nullable|string',
+            'is_custom' => 'nullable',
+            'custom_id' => 'nullable',
         ]);
 
         try {
@@ -47,22 +49,99 @@ class NotificationController extends Controller
                 \App\Models\Setting::setValue('last_direct_broadcast_image', $imageUrl);
             }
 
+            $isCustom = filter_var($request->input('is_custom', false), FILTER_VALIDATE_BOOLEAN);
+            $customId = $request->input('custom_id');
+            $dramaSlug = $request->input('drama_slug');
+            $tmdbId = $request->input('tmdb_id');
+
+            // Handle custom content 1-billion ID offset
+            if (!empty($customId)) {
+                $isCustom = true;
+                $numCustomId = (int)$customId;
+                $offsetId = ($numCustomId >= 1000000000) ? $numCustomId : (1000000000 + $numCustomId);
+                $dramaSlug = (string)$offsetId;
+                $tmdbId = (string)$offsetId;
+                $customId = ($numCustomId >= 1000000000) ? ($numCustomId - 1000000000) : $numCustomId;
+            } elseif ($isCustom && !empty($dramaSlug) && is_numeric($dramaSlug)) {
+                $num = (int)$dramaSlug;
+                $offsetId = ($num >= 1000000000) ? $num : (1000000000 + $num);
+                $dramaSlug = (string)$offsetId;
+                $tmdbId = (string)$offsetId;
+                $customId = ($num >= 1000000000) ? ($num - 1000000000) : $num;
+            }
 
             $this->sendFCMNotification(
                 $request->input('title'),
                 $request->input('body'),
                 $imageUrl,
                 $request->input('screen'),
-                $request->input('drama_slug'),
+                $dramaSlug,
                 $request->input('episode_number'),
                 $request->input('item_type'),
-                $request->input('tmdb_id')
+                $tmdbId,
+                null,
+                $isCustom,
+                $customId
             );
             return response()->json(['success' => true, 'message' => 'Notification sent successfully via Firebase FCM.']);
         } catch (\Exception $e) {
             Log::error('FCM Error: ' . $e->getMessage());
             return response()->json(['success' => false, 'message' => 'Failed to send notification: ' . $e->getMessage()], 500);
         }
+    }
+
+    /** POST /admin/api/notifications/send-custom/{id} - send manual notification for specific custom content */
+    public function sendCustom(Request $request, int $id)
+    {
+        $customMovie = \App\Models\CustomMovie::findOrFail($id);
+
+        $title = $request->input('title') ?: ("Now Streaming: " . $customMovie->title);
+        $body = $request->input('body') ?: ($customMovie->overview ?: "Watch {$customMovie->title} now on NazaaraBox!");
+        $imageUrl = $request->input('image_url') ?: ($customMovie->backdrop_path ?: $customMovie->poster_path);
+        $screen = $request->input('screen') ?: 'watch';
+        $itemType = $customMovie->type ?: 'movie';
+        $episodeNumber = $request->input('episode_number');
+
+        $offsetId = 1000000000 + (int)$customMovie->id;
+
+        try {
+            $this->sendFCMNotification(
+                title: $title,
+                body: $body,
+                imageUrl: $imageUrl,
+                screen: $screen,
+                dramaSlug: (string)$offsetId,
+                episodeNumber: $episodeNumber,
+                itemType: $itemType,
+                tmdbId: (string)$offsetId,
+                targetToken: null,
+                isCustom: true,
+                customId: $customMovie->id
+            );
+
+            return response()->json([
+                'success' => true,
+                'message' => "Push notification for '{$customMovie->title}' sent successfully to all users."
+            ]);
+        } catch (\Exception $e) {
+            Log::error("FCM Send Custom Error: " . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to send notification: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /** GET /admin/api/notifications/search-custom-content */
+    public function searchCustomContent(Request $request)
+    {
+        $q = trim($request->query('query', ''));
+        $query = \App\Models\CustomMovie::query();
+        if (!empty($q)) {
+            $query->where('title', 'like', "%{$q}%");
+        }
+        $items = $query->orderByDesc('updated_at')->limit(20)->get();
+        return response()->json($items);
     }
 
     /** POST /api/fcm/register-token - register active device token */
@@ -223,6 +302,14 @@ class NotificationController extends Controller
     {
         $template = ScheduledNotification::findOrFail($id);
 
+        $isCustom = false;
+        $customId = null;
+        $numId = (int)($template->tmdb_id ?: $template->drama_slug);
+        if ($numId >= 1000000000) {
+            $isCustom = true;
+            $customId = $numId - 1000000000;
+        }
+
         try {
             $this->sendFCMNotification(
                 $template->title,
@@ -232,7 +319,10 @@ class NotificationController extends Controller
                 $template->drama_slug,
                 $template->episode_number,
                 $template->type,
-                $template->tmdb_id
+                $template->tmdb_id,
+                null,
+                $isCustom,
+                $customId
             );
             return response()->json(['success' => true, 'message' => "Notification template '{$template->title}' sent successfully."]);
         } catch (\Exception $e) {
@@ -275,7 +365,7 @@ class NotificationController extends Controller
 
     // ── FCM & Access Token Helpers ────────────────────────────────────────────
 
-    public function sendFCMNotification($title, $body, $imageUrl = null, $screen = null, $dramaSlug = null, $episodeNumber = null, $itemType = null, $tmdbId = null, $targetToken = null)
+    public function sendFCMNotification($title, $body, $imageUrl = null, $screen = null, $dramaSlug = null, $episodeNumber = null, $itemType = null, $tmdbId = null, $targetToken = null, $isCustom = false, $customId = null)
     {
         $path = $this->getFirebaseCredentialsPath();
         if (!file_exists($path)) {
@@ -293,11 +383,20 @@ class NotificationController extends Controller
         $finalImageUrl = $imageUrl;
         if ($imageUrl && !str_starts_with($imageUrl, 'http')) {
             $trimmed = ltrim($imageUrl, '/');
-            if (str_starts_with($trimmed, 'uploads/')) {
+            if (str_starts_with($trimmed, 'uploads/') || str_starts_with($trimmed, 'storage/')) {
                 $baseUrl = rtrim(config('app.url', 'https://dashboard.thereviewepisode.com'), '/');
                 $finalImageUrl = $baseUrl . '/' . $trimmed;
             } else {
                 $finalImageUrl = 'https://image.tmdb.org/t/p/w780/' . $trimmed;
+            }
+        }
+
+        // Auto-detect custom if 1-billion ID offset is detected
+        $numId = (int)($tmdbId ?: $dramaSlug);
+        if ($numId >= 1000000000) {
+            $isCustom = true;
+            if (!$customId) {
+                $customId = $numId - 1000000000;
             }
         }
 
@@ -316,6 +415,8 @@ class NotificationController extends Controller
                 'episode_number' => (string) ($episodeNumber ?? ''),
                 'item_type' => (string) ($itemType ?? 'movie'),
                 'tmdb_id' => (string) ($tmdbId ?? ''),
+                'is_custom' => (string) ($isCustom ? 'true' : 'false'),
+                'custom_id' => (string) ($customId ?? ''),
             ],
             'android' => [
                 'priority' => 'HIGH',

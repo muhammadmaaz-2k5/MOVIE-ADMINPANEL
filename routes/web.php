@@ -184,6 +184,8 @@ Route::middleware(['web', 'admin.auth'])->group(function () {
     // Notification Manager
     Route::get('/admin/notification-manager', [\App\Http\Controllers\NotificationController::class, 'managerView'])->name('admin.notification-manager');
     Route::post('/admin/api/notifications/send', [\App\Http\Controllers\NotificationController::class, 'send']);
+    Route::post('/admin/api/notifications/send-custom/{id}', [\App\Http\Controllers\NotificationController::class, 'sendCustom']);
+    Route::get('/admin/api/notifications/search-custom-content', [\App\Http\Controllers\NotificationController::class, 'searchCustomContent']);
     Route::prefix('admin/api/scheduled-notifications')->group(function () {
         Route::get('/', [\App\Http\Controllers\NotificationController::class, 'index']);
         Route::post('/', [\App\Http\Controllers\NotificationController::class, 'store']);

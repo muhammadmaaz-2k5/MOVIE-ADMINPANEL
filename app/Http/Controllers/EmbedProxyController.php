@@ -108,9 +108,10 @@ class EmbedProxyController extends Controller
                 $streamData = self::fetchFiuosbaStream($m[1]);
                 if ($streamData) {
                     return response()
-                        ->view('embed.fiuosba_player', [
+                        ->view('embed.player', [
                             'streamData' => $streamData,
                             'filecode'   => $m[1],
+                            'url'        => $url,
                             'bottom'     => $bottom,
                         ])
                         ->header('X-Frame-Options', 'ALLOWALL');
@@ -142,20 +143,12 @@ class EmbedProxyController extends Controller
         $bottom = is_numeric($bottom) ? max(0, min(300, (int)$bottom)) : null;
 
         $streamData = self::fetchFiuosbaStream($cleanCode);
-        if ($streamData) {
-            return response()
-                ->view('embed.fiuosba_player', [
-                    'streamData' => $streamData,
-                    'filecode'   => $cleanCode,
-                    'bottom'     => $bottom,
-                ])
-                ->header('X-Frame-Options', 'ALLOWALL');
-        }
-
         return response()
             ->view('embed.player', [
-                'url'    => $targetUrl,
-                'bottom' => $bottom,
+                'streamData' => $streamData,
+                'filecode'   => $cleanCode,
+                'url'        => $targetUrl,
+                'bottom'     => $bottom,
             ])
             ->header('X-Frame-Options', 'ALLOWALL');
     }
