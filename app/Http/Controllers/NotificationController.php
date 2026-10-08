@@ -70,7 +70,7 @@ class NotificationController extends Controller
                 $customId = ($num >= 1000000000) ? ($num - 1000000000) : $num;
             }
 
-            $this->sendFCMNotification(
+            $result = $this->sendFCMNotification(
                 $request->input('title'),
                 $request->input('body'),
                 $imageUrl,
@@ -83,6 +83,8 @@ class NotificationController extends Controller
                 $isCustom,
                 $customId
             );
+            $messageId = $result['name'] ?? 'Sent';
+            Log::info("ManualNotification: Broadcasted '{$request->input('title')}' via FCM. Custom: " . ($isCustom ? "Yes (ID: {$customId}, Offset: {$dramaSlug})" : "No") . " ID: {$messageId}");
             return response()->json(['success' => true, 'message' => 'Notification sent successfully via Firebase FCM.']);
         } catch (\Exception $e) {
             Log::error('FCM Error: ' . $e->getMessage());
@@ -105,7 +107,7 @@ class NotificationController extends Controller
         $offsetId = 1000000000 + (int)$customMovie->id;
 
         try {
-            $this->sendFCMNotification(
+            $result = $this->sendFCMNotification(
                 title: $title,
                 body: $body,
                 imageUrl: $imageUrl,
@@ -118,6 +120,9 @@ class NotificationController extends Controller
                 isCustom: true,
                 customId: $customMovie->id
             );
+
+            $messageId = $result['name'] ?? 'Sent';
+            Log::info("ManualCustomNotification: Broadcasted '{$title}' (Custom ID: {$customMovie->id}, Offset: {$offsetId}) via FCM. ID: {$messageId}");
 
             return response()->json([
                 'success' => true,
@@ -311,7 +316,7 @@ class NotificationController extends Controller
         }
 
         try {
-            $this->sendFCMNotification(
+            $result = $this->sendFCMNotification(
                 $template->title,
                 $template->body,
                 $template->image_path,
@@ -324,6 +329,8 @@ class NotificationController extends Controller
                 $isCustom,
                 $customId
             );
+            $messageId = $result['name'] ?? 'Sent';
+            Log::info("ManualTemplateNotification: Broadcasted '{$template->title}' via FCM. ID: {$messageId}");
             return response()->json(['success' => true, 'message' => "Notification template '{$template->title}' sent successfully."]);
         } catch (\Exception $e) {
             Log::error('FCM Send Specific Error: ' . $e->getMessage());
